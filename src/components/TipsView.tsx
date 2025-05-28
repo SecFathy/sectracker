@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -54,8 +55,8 @@ These work because AngularJS evaluates expressions in the template context.`,
   });
 
   // Get unique categories and tags for filters
-  const uniqueCategories = [...new Set(tips.map(tip => tip.category))];
-  const uniqueTags = [...new Set(tips.flatMap(tip => tip.tags))];
+  const uniqueCategories = [...new Set(tips.map(tip => tip.category))].filter(Boolean);
+  const uniqueTags = [...new Set(tips.flatMap(tip => tip.tags))].filter(Boolean);
 
   const filteredTips = tips.filter(tip => {
     const matchesCategory = filters.category === 'all' || tip.category === filters.category;
@@ -128,7 +129,7 @@ These work because AngularJS evaluates expressions in the template context.`,
                 <SelectContent className="bg-gray-700 border-gray-600">
                   <SelectItem value="all">All Categories</SelectItem>
                   {uniqueCategories.map((category) => (
-                    <SelectItem key={category} value={category}>{category}</SelectItem>
+                    <SelectItem key={category} value={category || 'unknown'}>{category}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -143,7 +144,7 @@ These work because AngularJS evaluates expressions in the template context.`,
                 <SelectContent className="bg-gray-700 border-gray-600">
                   <SelectItem value="all">All Tags</SelectItem>
                   {uniqueTags.map((tag) => (
-                    <SelectItem key={tag} value={tag}>#{tag}</SelectItem>
+                    <SelectItem key={tag} value={tag || 'unknown'}>#{tag}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
