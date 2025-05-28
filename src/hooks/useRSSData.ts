@@ -58,7 +58,7 @@ export function useRSSData() {
           rss_feeds!inner(name, category)
         `)
         .order('pub_date', { ascending: false })
-        .limit(50);
+        .limit(100);
 
       if (error) {
         console.error('Error fetching articles:', error);
@@ -134,14 +134,40 @@ export function useRSSData() {
 
   const refreshFeeds = async () => {
     setRefreshing(true);
-    // Note: In a real implementation, you would call an edge function to fetch RSS feeds
-    // For now, we'll just refresh the existing articles
-    await fetchArticles();
-    setRefreshing(false);
-    toast({
-      title: "Refreshed",
-      description: "RSS feeds have been refreshed"
-    });
+    try {
+      console.log('Calling RSS fetch function...');
+      
+      const { data, error } = await supabase.functions.invoke('fetch-rss-feeds');
+      
+      if (error) {
+        console.error('Error calling fetch-rss-feeds function:', error);
+        toast({
+          title: "Error",
+          description: "Failed to refresh RSS feeds",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log('RSS fetch response:', data);
+      
+      // Refresh the articles after fetching
+      await fetchArticles();
+      
+      toast({
+        title: "Success",
+        description: data.message || "RSS feeds refreshed successfully"
+      });
+    } catch (error) {
+      console.error('Error refreshing feeds:', error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh RSS feeds",
+        variant: "destructive"
+      });
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   useEffect(() => {
