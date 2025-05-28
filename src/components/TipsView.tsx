@@ -1,9 +1,10 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Lightbulb, Copy, Eye } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Plus, Lightbulb, Copy, Eye, Search, Filter } from 'lucide-react';
 import { TipModal } from '@/components/TipModal';
 
 interface Tip {
@@ -46,6 +47,26 @@ These work because AngularJS evaluates expressions in the template context.`,
 
   const [showModal, setShowModal] = useState(false);
   const [selectedTip, setSelectedTip] = useState<Tip | null>(null);
+  const [filters, setFilters] = useState({
+    category: '',
+    tag: '',
+    search: ''
+  });
+
+  // Get unique categories and tags for filters
+  const uniqueCategories = [...new Set(tips.map(tip => tip.category))];
+  const uniqueTags = [...new Set(tips.flatMap(tip => tip.tags))];
+
+  const filteredTips = tips.filter(tip => {
+    const matchesCategory = !filters.category || tip.category === filters.category;
+    const matchesTag = !filters.tag || tip.tags.includes(filters.tag);
+    const matchesSearch = !filters.search || 
+      tip.title.toLowerCase().includes(filters.search.toLowerCase()) ||
+      tip.content.toLowerCase().includes(filters.search.toLowerCase()) ||
+      tip.tags.some(tag => tag.toLowerCase().includes(filters.search.toLowerCase()));
+    
+    return matchesCategory && matchesTag && matchesSearch;
+  });
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -75,8 +96,80 @@ These work because AngularJS evaluates expressions in the template context.`,
         </Button>
       </div>
 
+      {/* Filters */}
+      <Card className="bg-gray-800 border-gray-700">
+        <CardHeader>
+          <div className="flex items-center space-x-2">
+            <Filter className="h-4 w-4 text-gray-400" />
+            <span className="text-white font-medium">Filters</span>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <div className="flex items-center space-x-2 mb-2">
+                <Search className="h-4 w-4 text-gray-400" />
+                <span className="text-sm text-gray-400">Search</span>
+              </div>
+              <Input
+                placeholder="Search tips, tags, content..."
+                value={filters.search}
+                onChange={(e) => setFilters({...filters, search: e.target.value})}
+                className="bg-gray-700 border-gray-600 text-white"
+              />
+            </div>
+            
+            <div>
+              <div className="text-sm text-gray-400 mb-2">Bug Type</div>
+              <Select value={filters.category} onValueChange={(value) => setFilters({...filters, category: value})}>
+                <SelectTrigger className="bg-gray-700 border-gray-600">
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-700 border-gray-600">
+                  <SelectItem value="">All Categories</SelectItem>
+                  {uniqueCategories.map((category) => (
+                    <SelectItem key={category} value={category}>{category}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <div className="text-sm text-gray-400 mb-2">Tag</div>
+              <Select value={filters.tag} onValueChange={(value) => setFilters({...filters, tag: value})}>
+                <SelectTrigger className="bg-gray-700 border-gray-600">
+                  <SelectValue placeholder="All Tags" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-700 border-gray-600">
+                  <SelectItem value="">All Tags</SelectItem>
+                  {uniqueTags.map((tag) => (
+                    <SelectItem key={tag} value={tag}>#{tag}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          {(filters.search || filters.category || filters.tag) && (
+            <div className="mt-3 flex items-center justify-between">
+              <span className="text-sm text-gray-400">
+                Showing {filteredTips.length} of {tips.length} tips
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setFilters({ category: '', tag: '', search: '' })}
+                className="border-gray-600 text-gray-300 hover:bg-gray-700"
+              >
+                Clear Filters
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {tips.map((tip) => (
+        {filteredTips.map((tip) => (
           <Card key={tip.id} className="bg-gray-800 border-gray-700">
             <CardHeader>
               <div className="flex items-start justify-between">
@@ -129,6 +222,14 @@ These work because AngularJS evaluates expressions in the template context.`,
           </Card>
         ))}
       </div>
+
+      {filteredTips.length === 0 && (
+        <div className="text-center py-8">
+          <p className="text-gray-400">
+            {tips.length === 0 ? "No tips yet. Add your first security tip!" : "No tips match the current filters."}
+          </p>
+        </div>
+      )}
 
       <TipModal
         isOpen={showModal}

@@ -2,11 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Bug, Target, DollarSign, User, Settings } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Plus, Bug, Target, DollarSign, User, Eye, Filter } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { PlatformProfileModal } from '@/components/PlatformProfileModal';
 import { ProgramModal } from '@/components/ProgramModal';
 import { BugReportModal } from '@/components/BugReportModal';
+import { BugDetailsModal } from '@/components/BugDetailsModal';
 
 interface Platform {
   id: string;
@@ -62,7 +65,15 @@ export function PlatformsView() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showProgramModal, setShowProgramModal] = useState(false);
   const [showBugModal, setShowBugModal] = useState(false);
+  const [showBugDetails, setShowBugDetails] = useState(false);
   const [selectedPlatform, setSelectedPlatform] = useState<string>('');
+  const [selectedBug, setSelectedBug] = useState<Bug | null>(null);
+  const [bugFilters, setBugFilters] = useState({
+    severity: '',
+    status: '',
+    vulnerabilityType: '',
+    search: ''
+  });
 
   useEffect(() => {
     fetchData();
@@ -108,6 +119,23 @@ export function PlatformsView() {
     setUserProfiles(profilesData || []);
     setPrograms(programsData || []);
     setBugs(bugsData || []);
+  };
+
+  const filteredBugs = bugs.filter(bug => {
+    const matchesSeverity = !bugFilters.severity || bug.severity === bugFilters.severity;
+    const matchesStatus = !bugFilters.status || bug.status === bugFilters.status;
+    const matchesVulnType = !bugFilters.vulnerabilityType || bug.vulnerability_type?.toLowerCase().includes(bugFilters.vulnerabilityType.toLowerCase());
+    const matchesSearch = !bugFilters.search || 
+      bug.title.toLowerCase().includes(bugFilters.search.toLowerCase()) ||
+      bug.description?.toLowerCase().includes(bugFilters.search.toLowerCase()) ||
+      bug.program.name.toLowerCase().includes(bugFilters.search.toLowerCase());
+    
+    return matchesSeverity && matchesStatus && matchesVulnType && matchesSearch;
+  });
+
+  const handleViewBug = (bug: Bug) => {
+    setSelectedBug(bug);
+    setShowBugDetails(true);
   };
 
   const getSeverityColor = (severity: string) => {
@@ -208,19 +236,86 @@ export function PlatformsView() {
         ))}
       </div>
 
-      {/* Recent Bugs */}
+      {/* Recent Bugs with Filters */}
       <Card className="bg-gray-800 border-gray-700">
         <CardHeader>
-          <CardTitle className="text-white">Recent Bug Reports</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-white">Recent Bug Reports</CardTitle>
+            <div className="flex items-center space-x-2">
+              <Filter className="h-4 w-4 text-gray-400" />
+              <span className="text-sm text-gray-400">Filters</span>
+            </div>
+          </div>
+          
+          {/* Filters */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+            <div>
+              <Input
+                placeholder="Search bugs..."
+                value={bugFilters.search}
+                onChange={(e) => setBugFilters({...bugFilters, search: e.target.value})}
+                className="bg-gray-700 border-gray-600 text-white"
+              />
+            </div>
+            
+            <div>
+              <Select value={bugFilters.severity} onValueChange={(value) => setBugFilters({...bugFilters, severity: value})}>
+                <SelectTrigger className="bg-gray-700 border-gray-600">
+                  <SelectValue placeholder="All Severities" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-700 border-gray-600">
+                  <SelectItem value="">All Severities</SelectItem>
+                  <SelectItem value="Critical">Critical</SelectItem>
+                  <SelectItem value="High">High</SelectItem>
+                  <SelectItem value="Medium">Medium</SelectItem>
+                  <SelectItem value="Low">Low</SelectItem>
+                  <SelectItem value="Informational">Informational</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Select value={bugFilters.status} onValueChange={(value) => setBugFilters({...bugFilters, status: value})}>
+                <SelectTrigger className="bg-gray-700 border-gray-600">
+                  <SelectValue placeholder="All Statuses" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-700 border-gray-600">
+                  <SelectItem value="">All Statuses</SelectItem>
+                  <SelectItem value="Draft">Draft</SelectItem>
+                  <SelectItem value="Submitted">Submitted</SelectItem>
+                  <SelectItem value="Triaged">Triaged</SelectItem>
+                  <SelectItem value="Accepted">Accepted</SelectItem>
+                  <SelectItem value="Resolved">Resolved</SelectItem>
+                  <SelectItem value="Bounty Awarded">Bounty Awarded</SelectItem>
+                  <SelectItem value="Duplicate">Duplicate</SelectItem>
+                  <SelectItem value="Not Applicable">Not Applicable</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Input
+                placeholder="Vulnerability Type"
+                value={bugFilters.vulnerabilityType}
+                onChange={(e) => setBugFilters({...bugFilters, vulnerabilityType: e.target.value})}
+                className="bg-gray-700 border-gray-600 text-white"
+              />
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {bugs.map((bug) => (
+            {filteredBugs.map((bug) => (
               <div key={bug.id} className="flex items-center justify-between p-4 bg-gray-900 rounded border border-gray-700">
                 <div className="flex-1">
                   <h5 className="text-white font-medium">{bug.title}</h5>
                   <p className="text-sm text-gray-400">{bug.program.name} • {bug.program.company}</p>
                   <p className="text-xs text-gray-500 mt-1">{bug.submission_date}</p>
+                  {bug.vulnerability_type && (
+                    <Badge variant="outline" className="border-gray-600 text-gray-400 text-xs mt-1">
+                      {bug.vulnerability_type}
+                    </Badge>
+                  )}
                 </div>
                 <div className="flex items-center space-x-2 ml-4">
                   <Badge className={`${getSeverityColor(bug.severity)} text-white`}>
@@ -235,11 +330,21 @@ export function PlatformsView() {
                       <span className="text-sm font-medium">${bug.bounty_amount}</span>
                     </div>
                   )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleViewBug(bug)}
+                    className="border-gray-600 text-gray-300 hover:bg-gray-700"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             ))}
-            {bugs.length === 0 && (
-              <p className="text-gray-400 text-center py-8">No bug reports yet. Start by adding your first bug report!</p>
+            {filteredBugs.length === 0 && (
+              <p className="text-gray-400 text-center py-8">
+                {bugs.length === 0 ? "No bug reports yet. Start by adding your first bug report!" : "No bugs match the current filters."}
+              </p>
             )}
           </div>
         </CardContent>
@@ -263,6 +368,12 @@ export function PlatformsView() {
         isOpen={showBugModal}
         onClose={() => setShowBugModal(false)}
         onSave={fetchData}
+      />
+
+      <BugDetailsModal
+        bug={selectedBug}
+        isOpen={showBugDetails}
+        onClose={() => setShowBugDetails(false)}
       />
     </div>
   );

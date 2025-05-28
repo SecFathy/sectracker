@@ -1,9 +1,10 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, BookOpen, ExternalLink, CheckSquare, Clock } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Plus, BookOpen, ExternalLink, CheckSquare, Clock, Search, Filter } from 'lucide-react';
 import { ReadingModal } from '@/components/ReadingModal';
 
 interface ReadingItem {
@@ -15,6 +16,7 @@ interface ReadingItem {
   dateAdded: string;
   read: boolean;
   priority: 'High' | 'Medium' | 'Low';
+  category: string;
 }
 
 export function ReadingListView() {
@@ -27,7 +29,8 @@ export function ReadingListView() {
       tags: ['xss', 'dom', 'csp'],
       dateAdded: '2024-01-15',
       read: false,
-      priority: 'High'
+      priority: 'High',
+      category: 'Web Security'
     },
     {
       id: '2',
@@ -37,7 +40,8 @@ export function ReadingListView() {
       tags: ['sqli', 'graphql', 'api'],
       dateAdded: '2024-01-12',
       read: true,
-      priority: 'Medium'
+      priority: 'Medium',
+      category: 'API Security'
     },
     {
       id: '3',
@@ -47,12 +51,22 @@ export function ReadingListView() {
       tags: ['mobile', 'sast', 'dast'],
       dateAdded: '2024-01-10',
       read: false,
-      priority: 'High'
+      priority: 'High',
+      category: 'Mobile Security'
     }
   ]);
 
   const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
+  const [filters, setFilters] = useState({
+    category: '',
+    tag: '',
+    search: ''
+  });
+
+  // Get unique categories and tags for filters
+  const uniqueCategories = [...new Set(readingList.map(item => item.category))];
+  const uniqueTags = [...new Set(readingList.flatMap(item => item.tags))];
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -70,8 +84,29 @@ export function ReadingListView() {
   };
 
   const filteredItems = readingList.filter(item => {
-    if (filter === 'read') return item.read;
-    if (filter === 'unread') return !item.read;
+    // Status filter
+    if (filter === 'read' && !item.read) return false;
+    if (filter === 'unread' && item.read) return false;
+    
+    // Category filter
+    if (filters.category && item.category !== filters.category) return false;
+    
+    // Tag filter
+    if (filters.tag && !item.tags.includes(filters.tag)) return false;
+    
+    // Search filter
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      const matchesTitle = item.title.toLowerCase().includes(searchLower);
+      const matchesDescription = item.description.toLowerCase().includes(searchLower);
+      const matchesTags = item.tags.some(tag => tag.toLowerCase().includes(searchLower));
+      const matchesCategory = item.category.toLowerCase().includes(searchLower);
+      
+      if (!matchesTitle && !matchesDescription && !matchesTags && !matchesCategory) {
+        return false;
+      }
+    }
+    
     return true;
   });
 
@@ -93,6 +128,7 @@ export function ReadingListView() {
         </Button>
       </div>
 
+      {/* Status Filter Buttons */}
       <div className="flex space-x-2">
         <Button
           variant={filter === 'all' ? 'default' : 'outline'}
@@ -117,6 +153,78 @@ export function ReadingListView() {
         </Button>
       </div>
 
+      {/* Advanced Filters */}
+      <Card className="bg-gray-800 border-gray-700">
+        <CardHeader>
+          <div className="flex items-center space-x-2">
+            <Filter className="h-4 w-4 text-gray-400" />
+            <span className="text-white font-medium">Search & Filters</span>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <div className="flex items-center space-x-2 mb-2">
+                <Search className="h-4 w-4 text-gray-400" />
+                <span className="text-sm text-gray-400">Search</span>
+              </div>
+              <Input
+                placeholder="Search title, description, tags..."
+                value={filters.search}
+                onChange={(e) => setFilters({...filters, search: e.target.value})}
+                className="bg-gray-700 border-gray-600 text-white"
+              />
+            </div>
+            
+            <div>
+              <div className="text-sm text-gray-400 mb-2">Category</div>
+              <Select value={filters.category} onValueChange={(value) => setFilters({...filters, category: value})}>
+                <SelectTrigger className="bg-gray-700 border-gray-600">
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-700 border-gray-600">
+                  <SelectItem value="">All Categories</SelectItem>
+                  {uniqueCategories.map((category) => (
+                    <SelectItem key={category} value={category}>{category}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <div className="text-sm text-gray-400 mb-2">Tag</div>
+              <Select value={filters.tag} onValueChange={(value) => setFilters({...filters, tag: value})}>
+                <SelectTrigger className="bg-gray-700 border-gray-600">
+                  <SelectValue placeholder="All Tags" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-700 border-gray-600">
+                  <SelectItem value="">All Tags</SelectItem>
+                  {uniqueTags.map((tag) => (
+                    <SelectItem key={tag} value={tag}>#{tag}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          {(filters.search || filters.category || filters.tag) && (
+            <div className="mt-3 flex items-center justify-between">
+              <span className="text-sm text-gray-400">
+                Showing {filteredItems.length} of {readingList.length} articles
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setFilters({ category: '', tag: '', search: '' })}
+                className="border-gray-600 text-gray-300 hover:bg-gray-700"
+              >
+                Clear Filters
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="space-y-4">
         {filteredItems.map((item) => (
           <Card key={item.id} className={`bg-gray-800 border-gray-700 ${item.read ? 'opacity-75' : ''}`}>
@@ -130,6 +238,9 @@ export function ReadingListView() {
                   <div className="flex items-center space-x-2 mt-2">
                     <Badge className={`${getPriorityColor(item.priority)} text-white`}>
                       {item.priority}
+                    </Badge>
+                    <Badge variant="outline" className="border-cyan-600 text-cyan-400">
+                      {item.category}
                     </Badge>
                     <span className="text-xs text-gray-400">{item.dateAdded}</span>
                     {item.read && (
@@ -179,6 +290,14 @@ export function ReadingListView() {
           </Card>
         ))}
       </div>
+
+      {filteredItems.length === 0 && (
+        <div className="text-center py-8">
+          <p className="text-gray-400">
+            {readingList.length === 0 ? "No articles yet. Add your first article to read!" : "No articles match the current filters."}
+          </p>
+        </div>
+      )}
 
       <ReadingModal
         isOpen={showModal}
