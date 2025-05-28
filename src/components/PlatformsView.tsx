@@ -1,16 +1,17 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Bug, Target, DollarSign, User, Eye, Filter } from 'lucide-react';
+import { Plus, Bug, Target, DollarSign, User, Eye, Filter, Edit, Trash2, Archive, RotateCcw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { PlatformProfileModal } from '@/components/PlatformProfileModal';
 import { ProgramModal } from '@/components/ProgramModal';
 import { BugReportModal } from '@/components/BugReportModal';
 import { BugDetailsModal } from '@/components/BugDetailsModal';
+import { BugActionsModal } from '@/components/BugActionsModal';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface Platform {
   id: string;
@@ -67,8 +68,11 @@ export function PlatformsView() {
   const [showProgramModal, setShowProgramModal] = useState(false);
   const [showBugModal, setShowBugModal] = useState(false);
   const [showBugDetails, setShowBugDetails] = useState(false);
+  const [showBugActions, setShowBugActions] = useState(false);
   const [selectedPlatform, setSelectedPlatform] = useState<string>('');
   const [selectedBug, setSelectedBug] = useState<Bug | null>(null);
+  const [selectedBugForAction, setSelectedBugForAction] = useState<Bug | null>(null);
+  const [bugActionMode, setBugActionMode] = useState<'edit' | 'delete' | 'archive' | 'unarchive'>('edit');
   const [bugFilters, setBugFilters] = useState({
     severity: 'all',
     status: 'all',
@@ -137,6 +141,12 @@ export function PlatformsView() {
   const handleViewBug = (bug: Bug) => {
     setSelectedBug(bug);
     setShowBugDetails(true);
+  };
+
+  const handleBugAction = (bug: Bug, action: 'edit' | 'delete' | 'archive' | 'unarchive') => {
+    setSelectedBugForAction(bug);
+    setBugActionMode(action);
+    setShowBugActions(true);
   };
 
   const getSeverityColor = (severity: string) => {
@@ -331,14 +341,61 @@ export function PlatformsView() {
                       <span className="text-sm font-medium">${bug.bounty_amount}</span>
                     </div>
                   )}
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleViewBug(bug)}
-                    className="border-gray-600 text-gray-300 hover:bg-gray-700"
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
+                  
+                  <div className="flex items-center space-x-1">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleViewBug(bug)}
+                      className="border-gray-600 text-gray-300 hover:bg-gray-700"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-gray-600 text-gray-300 hover:bg-gray-700"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="bg-gray-700 border-gray-600">
+                        <DropdownMenuItem 
+                          onClick={() => handleBugAction(bug, 'edit')}
+                          className="text-gray-300 hover:bg-gray-600"
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => handleBugAction(bug, bug.status === 'Resolved' ? 'unarchive' : 'archive')}
+                          className="text-gray-300 hover:bg-gray-600"
+                        >
+                          {bug.status === 'Resolved' ? (
+                            <>
+                              <RotateCcw className="h-4 w-4 mr-2" />
+                              Unarchive
+                            </>
+                          ) : (
+                            <>
+                              <Archive className="h-4 w-4 mr-2" />
+                              Archive
+                            </>
+                          )}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => handleBugAction(bug, 'delete')}
+                          className="text-red-400 hover:bg-gray-600"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
               </div>
             ))}
@@ -375,6 +432,14 @@ export function PlatformsView() {
         bug={selectedBug}
         isOpen={showBugDetails}
         onClose={() => setShowBugDetails(false)}
+      />
+
+      <BugActionsModal
+        bug={selectedBugForAction}
+        isOpen={showBugActions}
+        onClose={() => setShowBugActions(false)}
+        onSave={fetchData}
+        mode={bugActionMode}
       />
     </div>
   );
