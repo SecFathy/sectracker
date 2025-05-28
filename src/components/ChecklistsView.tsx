@@ -1,10 +1,9 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Plus, CheckSquare, Monitor, Smartphone, DesktopIcon } from 'lucide-react';
+import { Plus, CheckSquare, Monitor, Smartphone, Computer } from 'lucide-react';
 
 interface ChecklistItem {
   id: string;
@@ -54,7 +53,7 @@ export function ChecklistsView() {
     switch (type) {
       case 'web': return Monitor;
       case 'mobile': return Smartphone;
-      case 'desktop': return DesktopIcon;
+      case 'desktop': return Computer;
       default: return CheckSquare;
     }
   };
