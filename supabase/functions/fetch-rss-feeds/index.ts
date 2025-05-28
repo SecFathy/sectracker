@@ -23,32 +23,50 @@ interface RSSFeed {
 }
 
 function parseRSSFeed(xmlText: string): RSSItem[] {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(xmlText, 'text/xml');
-  
   const items: RSSItem[] = [];
-  const itemElements = doc.querySelectorAll('item');
   
-  itemElements.forEach((item) => {
-    const title = item.querySelector('title')?.textContent?.trim();
-    const description = item.querySelector('description')?.textContent?.trim();
-    const link = item.querySelector('link')?.textContent?.trim();
-    const pubDate = item.querySelector('pubDate')?.textContent?.trim();
-    const guid = item.querySelector('guid')?.textContent?.trim();
-    const author = item.querySelector('author')?.textContent?.trim() || 
-                  item.querySelector('dc\\:creator')?.textContent?.trim();
-    
-    if (title && link) {
-      items.push({
-        title,
-        description: description || '',
-        link,
-        pubDate,
-        guid: guid || link,
-        author
-      });
+  try {
+    // Simple regex-based parsing since DOMParser isn't available in Deno
+    const itemRegex = /<item[^>]*>([\s\S]*?)<\/item>/gi;
+    const titleRegex = /<title[^>]*><!\[CDATA\[(.*?)\]\]><\/title>|<title[^>]*>(.*?)<\/title>/i;
+    const descRegex = /<description[^>]*><!\[CDATA\[(.*?)\]\]><\/description>|<description[^>]*>(.*?)<\/description>/i;
+    const linkRegex = /<link[^>]*>(.*?)<\/link>/i;
+    const pubDateRegex = /<pubDate[^>]*>(.*?)<\/pubDate>/i;
+    const guidRegex = /<guid[^>]*>(.*?)<\/guid>/i;
+    const authorRegex = /<author[^>]*>(.*?)<\/author>|<dc:creator[^>]*><!\[CDATA\[(.*?)\]\]><\/dc:creator>|<dc:creator[^>]*>(.*?)<\/dc:creator>/i;
+
+    let match;
+    while ((match = itemRegex.exec(xmlText)) !== null && items.length < 10) { // Limit to 10 items per feed
+      const itemContent = match[1];
+      
+      const titleMatch = titleRegex.exec(itemContent);
+      const descMatch = descRegex.exec(itemContent);
+      const linkMatch = linkRegex.exec(itemContent);
+      const pubDateMatch = pubDateRegex.exec(itemContent);
+      const guidMatch = guidRegex.exec(itemContent);
+      const authorMatch = authorRegex.exec(itemContent);
+
+      const title = (titleMatch?.[1] || titleMatch?.[2] || '').trim();
+      const description = (descMatch?.[1] || descMatch?.[2] || '').trim();
+      const link = linkMatch?.[1]?.trim() || '';
+      const pubDate = pubDateMatch?.[1]?.trim();
+      const guid = guidMatch?.[1]?.trim();
+      const author = (authorMatch?.[1] || authorMatch?.[2] || authorMatch?.[3] || '').trim();
+
+      if (title && link) {
+        items.push({
+          title: title.replace(/<!\[CDATA\[|\]\]>/g, '').substring(0, 255), // Limit title length
+          description: description.replace(/<!\[CDATA\[|\]\]>|<[^>]*>/g, '').substring(0, 500), // Strip HTML and limit
+          link: link.substring(0, 500), // Limit URL length
+          pubDate,
+          guid: guid || link,
+          author: author.substring(0, 100) // Limit author length
+        });
+      }
     }
-  });
+  } catch (error) {
+    console.error('Error parsing RSS feed:', error);
+  }
   
   return items;
 }
@@ -66,10 +84,11 @@ serve(async (req) => {
 
     console.log('Fetching RSS feeds from database...');
     
-    // Get all RSS feeds
+    // Get only first 10 RSS feeds to avoid memory issues
     const { data: feeds, error: feedsError } = await supabaseClient
       .from('rss_feeds')
-      .select('id, url, name');
+      .select('id, url, name')
+      .limit(10);
 
     if (feedsError) {
       console.error('Error fetching feeds:', feedsError);
@@ -79,55 +98,83 @@ serve(async (req) => {
     console.log(`Found ${feeds?.length || 0} feeds to process`);
 
     let totalArticlesAdded = 0;
+    const maxConcurrent = 3; // Process only 3 feeds at a time
 
-    for (const feed of feeds || []) {
-      try {
-        console.log(`Fetching RSS feed: ${feed.name} (${feed.url})`);
-        
-        const response = await fetch(feed.url, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (compatible; RSS-Fetcher/1.0)',
-          },
-        });
+    // Process feeds in smaller batches
+    for (let i = 0; i < (feeds?.length || 0); i += maxConcurrent) {
+      const batch = feeds?.slice(i, i + maxConcurrent) || [];
+      
+      await Promise.allSettled(batch.map(async (feed) => {
+        try {
+          console.log(`Fetching RSS feed: ${feed.name} (${feed.url})`);
+          
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-        if (!response.ok) {
-          console.error(`Failed to fetch ${feed.name}: ${response.status}`);
-          continue;
-        }
+          const response = await fetch(feed.url, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (compatible; RSS-Fetcher/1.0)',
+              'Accept': 'application/rss+xml, application/xml, text/xml',
+            },
+            signal: controller.signal,
+          });
 
-        const xmlText = await response.text();
-        const articles = parseRSSFeed(xmlText);
-        
-        console.log(`Parsed ${articles.length} articles from ${feed.name}`);
+          clearTimeout(timeoutId);
 
-        // Insert articles into database
-        for (const article of articles) {
-          try {
-            const { error: insertError } = await supabaseClient
-              .from('rss_articles')
-              .upsert({
-                feed_id: feed.id,
-                title: article.title,
-                description: article.description,
-                link: article.link,
-                pub_date: article.pubDate ? new Date(article.pubDate).toISOString() : null,
-                guid: article.guid,
-                author: article.author
-              }, {
-                onConflict: 'feed_id,guid'
-              });
-
-            if (insertError) {
-              console.error(`Error inserting article: ${insertError.message}`);
-            } else {
-              totalArticlesAdded++;
-            }
-          } catch (articleError) {
-            console.error(`Error processing article from ${feed.name}:`, articleError);
+          if (!response.ok) {
+            console.error(`Failed to fetch ${feed.name}: ${response.status}`);
+            return;
           }
+
+          const xmlText = await response.text();
+          
+          // Skip if response is too large (>1MB)
+          if (xmlText.length > 1024 * 1024) {
+            console.error(`Feed too large: ${feed.name}`);
+            return;
+          }
+
+          const articles = parseRSSFeed(xmlText);
+          
+          console.log(`Parsed ${articles.length} articles from ${feed.name}`);
+
+          // Insert articles in smaller batches
+          const batchSize = 5;
+          for (let j = 0; j < articles.length; j += batchSize) {
+            const articleBatch = articles.slice(j, j + batchSize);
+            
+            for (const article of articleBatch) {
+              try {
+                const { error: insertError } = await supabaseClient
+                  .from('rss_articles')
+                  .upsert({
+                    feed_id: feed.id,
+                    title: article.title,
+                    description: article.description,
+                    link: article.link,
+                    pub_date: article.pubDate ? new Date(article.pubDate).toISOString() : null,
+                    guid: article.guid,
+                    author: article.author
+                  }, {
+                    onConflict: 'feed_id,guid'
+                  });
+
+                if (!insertError) {
+                  totalArticlesAdded++;
+                }
+              } catch (articleError) {
+                console.error(`Error inserting article from ${feed.name}:`, articleError);
+              }
+            }
+          }
+        } catch (feedError) {
+          console.error(`Error processing feed ${feed.name}:`, feedError);
         }
-      } catch (feedError) {
-        console.error(`Error processing feed ${feed.name}:`, feedError);
+      }));
+      
+      // Small delay between batches to prevent memory buildup
+      if (i + maxConcurrent < (feeds?.length || 0)) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
 
