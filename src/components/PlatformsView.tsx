@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -69,8 +70,8 @@ export function PlatformsView() {
   const [selectedPlatform, setSelectedPlatform] = useState<string>('');
   const [selectedBug, setSelectedBug] = useState<Bug | null>(null);
   const [bugFilters, setBugFilters] = useState({
-    severity: '',
-    status: '',
+    severity: 'all',
+    status: 'all',
     vulnerabilityType: '',
     search: ''
   });
@@ -122,8 +123,8 @@ export function PlatformsView() {
   };
 
   const filteredBugs = bugs.filter(bug => {
-    const matchesSeverity = !bugFilters.severity || bug.severity === bugFilters.severity;
-    const matchesStatus = !bugFilters.status || bug.status === bugFilters.status;
+    const matchesSeverity = bugFilters.severity === 'all' || bug.severity === bugFilters.severity;
+    const matchesStatus = bugFilters.status === 'all' || bug.status === bugFilters.status;
     const matchesVulnType = !bugFilters.vulnerabilityType || bug.vulnerability_type?.toLowerCase().includes(bugFilters.vulnerabilityType.toLowerCase());
     const matchesSearch = !bugFilters.search || 
       bug.title.toLowerCase().includes(bugFilters.search.toLowerCase()) ||
@@ -264,7 +265,7 @@ export function PlatformsView() {
                   <SelectValue placeholder="All Severities" />
                 </SelectTrigger>
                 <SelectContent className="bg-gray-700 border-gray-600">
-                  <SelectItem value="">All Severities</SelectItem>
+                  <SelectItem value="all">All Severities</SelectItem>
                   <SelectItem value="Critical">Critical</SelectItem>
                   <SelectItem value="High">High</SelectItem>
                   <SelectItem value="Medium">Medium</SelectItem>
@@ -280,7 +281,7 @@ export function PlatformsView() {
                   <SelectValue placeholder="All Statuses" />
                 </SelectTrigger>
                 <SelectContent className="bg-gray-700 border-gray-600">
-                  <SelectItem value="">All Statuses</SelectItem>
+                  <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="Draft">Draft</SelectItem>
                   <SelectItem value="Submitted">Submitted</SelectItem>
                   <SelectItem value="Triaged">Triaged</SelectItem>

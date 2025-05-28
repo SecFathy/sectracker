@@ -48,8 +48,8 @@ These work because AngularJS evaluates expressions in the template context.`,
   const [showModal, setShowModal] = useState(false);
   const [selectedTip, setSelectedTip] = useState<Tip | null>(null);
   const [filters, setFilters] = useState({
-    category: '',
-    tag: '',
+    category: 'all',
+    tag: 'all',
     search: ''
   });
 
@@ -58,8 +58,8 @@ These work because AngularJS evaluates expressions in the template context.`,
   const uniqueTags = [...new Set(tips.flatMap(tip => tip.tags))];
 
   const filteredTips = tips.filter(tip => {
-    const matchesCategory = !filters.category || tip.category === filters.category;
-    const matchesTag = !filters.tag || tip.tags.includes(filters.tag);
+    const matchesCategory = filters.category === 'all' || tip.category === filters.category;
+    const matchesTag = filters.tag === 'all' || tip.tags.includes(filters.tag);
     const matchesSearch = !filters.search || 
       tip.title.toLowerCase().includes(filters.search.toLowerCase()) ||
       tip.content.toLowerCase().includes(filters.search.toLowerCase()) ||
@@ -126,7 +126,7 @@ These work because AngularJS evaluates expressions in the template context.`,
                   <SelectValue placeholder="All Categories" />
                 </SelectTrigger>
                 <SelectContent className="bg-gray-700 border-gray-600">
-                  <SelectItem value="">All Categories</SelectItem>
+                  <SelectItem value="all">All Categories</SelectItem>
                   {uniqueCategories.map((category) => (
                     <SelectItem key={category} value={category}>{category}</SelectItem>
                   ))}
@@ -141,7 +141,7 @@ These work because AngularJS evaluates expressions in the template context.`,
                   <SelectValue placeholder="All Tags" />
                 </SelectTrigger>
                 <SelectContent className="bg-gray-700 border-gray-600">
-                  <SelectItem value="">All Tags</SelectItem>
+                  <SelectItem value="all">All Tags</SelectItem>
                   {uniqueTags.map((tag) => (
                     <SelectItem key={tag} value={tag}>#{tag}</SelectItem>
                   ))}
@@ -150,7 +150,7 @@ These work because AngularJS evaluates expressions in the template context.`,
             </div>
           </div>
           
-          {(filters.search || filters.category || filters.tag) && (
+          {(filters.search || filters.category !== 'all' || filters.tag !== 'all') && (
             <div className="mt-3 flex items-center justify-between">
               <span className="text-sm text-gray-400">
                 Showing {filteredTips.length} of {tips.length} tips
@@ -158,7 +158,7 @@ These work because AngularJS evaluates expressions in the template context.`,
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setFilters({ category: '', tag: '', search: '' })}
+                onClick={() => setFilters({ category: 'all', tag: 'all', search: '' })}
                 className="border-gray-600 text-gray-300 hover:bg-gray-700"
               >
                 Clear Filters
