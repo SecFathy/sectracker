@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -59,14 +60,14 @@ export function ReadingListView() {
   const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
   const [filters, setFilters] = useState({
-    category: '',
-    tag: '',
+    category: 'all',
+    tag: 'all',
     search: ''
   });
 
   // Get unique categories and tags for filters
-  const uniqueCategories = [...new Set(readingList.map(item => item.category))];
-  const uniqueTags = [...new Set(readingList.flatMap(item => item.tags))];
+  const uniqueCategories = [...new Set(readingList.map(item => item.category))].filter(Boolean);
+  const uniqueTags = [...new Set(readingList.flatMap(item => item.tags))].filter(Boolean);
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -89,10 +90,10 @@ export function ReadingListView() {
     if (filter === 'unread' && item.read) return false;
     
     // Category filter
-    if (filters.category && item.category !== filters.category) return false;
+    if (filters.category !== 'all' && item.category !== filters.category) return false;
     
     // Tag filter
-    if (filters.tag && !item.tags.includes(filters.tag)) return false;
+    if (filters.tag !== 'all' && !item.tags.includes(filters.tag)) return false;
     
     // Search filter
     if (filters.search) {
@@ -183,9 +184,9 @@ export function ReadingListView() {
                   <SelectValue placeholder="All Categories" />
                 </SelectTrigger>
                 <SelectContent className="bg-gray-700 border-gray-600">
-                  <SelectItem value="">All Categories</SelectItem>
+                  <SelectItem value="all">All Categories</SelectItem>
                   {uniqueCategories.map((category) => (
-                    <SelectItem key={category} value={category}>{category}</SelectItem>
+                    <SelectItem key={category} value={category || 'unknown'}>{category}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -198,16 +199,16 @@ export function ReadingListView() {
                   <SelectValue placeholder="All Tags" />
                 </SelectTrigger>
                 <SelectContent className="bg-gray-700 border-gray-600">
-                  <SelectItem value="">All Tags</SelectItem>
+                  <SelectItem value="all">All Tags</SelectItem>
                   {uniqueTags.map((tag) => (
-                    <SelectItem key={tag} value={tag}>#{tag}</SelectItem>
+                    <SelectItem key={tag} value={tag || 'unknown'}>#{tag}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
           
-          {(filters.search || filters.category || filters.tag) && (
+          {(filters.search || filters.category !== 'all' || filters.tag !== 'all') && (
             <div className="mt-3 flex items-center justify-between">
               <span className="text-sm text-gray-400">
                 Showing {filteredItems.length} of {readingList.length} articles
@@ -215,7 +216,7 @@ export function ReadingListView() {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setFilters({ category: '', tag: '', search: '' })}
+                onClick={() => setFilters({ category: 'all', tag: 'all', search: '' })}
                 className="border-gray-600 text-gray-300 hover:bg-gray-700"
               >
                 Clear Filters
