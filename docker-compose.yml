@@ -1,0 +1,42 @@
+
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: sectracker_db
+    environment:
+      POSTGRES_DB: sectracker
+      POSTGRES_USER: sectracker_user
+      POSTGRES_PASSWORD: sectracker_password
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - sectracker_network
+    restart: unless-stopped
+
+  app:
+    build: .
+    container_name: sectracker_app
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_DATABASE_URL=postgresql://sectracker_user:sectracker_password@postgres:5432/sectracker
+      - VITE_SUPABASE_URL=http://localhost:3000
+      - VITE_SUPABASE_ANON_KEY=offline_mode
+    depends_on:
+      - postgres
+    networks:
+      - sectracker_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  sectracker_network:
+    driver: bridge
