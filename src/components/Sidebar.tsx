@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Shield, Bug, CheckSquare, Lightbulb, BookOpen, BarChart3, LogOut, FileText, Link } from 'lucide-react';
+import { Shield, Bug, CheckSquare, Lightbulb, BookOpen, BarChart3, LogOut, FileText, Link, User, Rss } from 'lucide-react';
 import { Sidebar as SidebarUI, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,8 +16,10 @@ const menuItems = [
   { id: 'checklists', title: 'Security Checklists', icon: CheckSquare, color: 'text-green-400' },
   { id: 'tips', title: 'Tips & Tricks', icon: Lightbulb, color: 'text-yellow-400' },
   { id: 'reading', title: 'Reading List', icon: BookOpen, color: 'text-blue-400' },
+  { id: 'rss', title: 'News Feed', icon: Rss, color: 'text-orange-400' },
   { id: 'notes', title: 'Personal Notes', icon: FileText, color: 'text-purple-400' },
   { id: 'links', title: 'Useful Links', icon: Link, color: 'text-orange-400' },
+  { id: 'profile', title: 'Profile', icon: User, color: 'text-pink-400' },
 ];
 
 export function Sidebar({ activeView, setActiveView }: SidebarProps) {

@@ -187,6 +187,36 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          updated_at: string | null
+          username: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          first_name?: string | null
+          id: string
+          last_name?: string | null
+          updated_at?: string | null
+          username?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          updated_at?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
       programs: {
         Row: {
           company: string
@@ -273,6 +303,80 @@ export type Database = {
           updated_at?: string | null
           url?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      rss_articles: {
+        Row: {
+          author: string | null
+          created_at: string | null
+          description: string | null
+          feed_id: string | null
+          guid: string | null
+          id: string
+          link: string
+          pub_date: string | null
+          title: string
+        }
+        Insert: {
+          author?: string | null
+          created_at?: string | null
+          description?: string | null
+          feed_id?: string | null
+          guid?: string | null
+          id?: string
+          link: string
+          pub_date?: string | null
+          title: string
+        }
+        Update: {
+          author?: string | null
+          created_at?: string | null
+          description?: string | null
+          feed_id?: string | null
+          guid?: string | null
+          id?: string
+          link?: string
+          pub_date?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rss_articles_feed_id_fkey"
+            columns: ["feed_id"]
+            isOneToOne: false
+            referencedRelation: "rss_feeds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rss_feeds: {
+        Row: {
+          category: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_default: boolean | null
+          name: string
+          url: string
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean | null
+          name: string
+          url: string
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          url?: string
         }
         Relationships: []
       }
@@ -421,6 +525,35 @@ export type Database = {
             columns: ["platform_id"]
             isOneToOne: false
             referencedRelation: "platforms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_rss_subscriptions: {
+        Row: {
+          feed_id: string | null
+          id: string
+          subscribed_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          feed_id?: string | null
+          id?: string
+          subscribed_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          feed_id?: string | null
+          id?: string
+          subscribed_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_rss_subscriptions_feed_id_fkey"
+            columns: ["feed_id"]
+            isOneToOne: false
+            referencedRelation: "rss_feeds"
             referencedColumns: ["id"]
           },
         ]
