@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +12,7 @@ import { BugReportModal } from '@/components/BugReportModal';
 import { BugDetailsModal } from '@/components/BugDetailsModal';
 import { BugActionsModal } from '@/components/BugActionsModal';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Database } from '@/integrations/supabase/types';
 
 interface Platform {
   id: string;
@@ -52,8 +52,8 @@ interface Bug {
   program_id: string;
   title: string;
   description: string;
-  severity: string;
-  status: string;
+  severity: Database['public']['Enums']['bug_severity'];
+  status: Database['public']['Enums']['bug_status'];
   bounty_amount: number;
   submission_date: string;
   vulnerability_type: string;
