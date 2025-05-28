@@ -6,6 +6,8 @@ import { PlatformsView } from '@/components/PlatformsView';
 import { ChecklistsView } from '@/components/ChecklistsView';
 import { TipsView } from '@/components/TipsView';
 import { ReadingListView } from '@/components/ReadingListView';
+import { PersonalNotesView } from '@/components/PersonalNotesView';
+import { UsefulLinksView } from '@/components/UsefulLinksView';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { AuthWrapper } from '@/components/AuthWrapper';
 
@@ -24,6 +26,10 @@ const Index = () => {
         return <TipsView />;
       case 'reading':
         return <ReadingListView />;
+      case 'notes':
+        return <PersonalNotesView />;
+      case 'links':
+        return <UsefulLinksView />;
       default:
         return <Dashboard />;
     }

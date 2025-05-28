@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Bug, Shield, CheckSquare, Lightbulb, Target, Trophy } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { QuickNote } from '@/components/QuickNote';
 
 interface DashboardStats {
   totalPlatforms: number;
@@ -11,6 +12,13 @@ interface DashboardStats {
   totalChecklists: number;
   totalTips: number;
   readingItems: number;
+  severityStats: {
+    Critical: number;
+    High: number;
+    Medium: number;
+    Low: number;
+    Informational: number;
+  };
 }
 
 export function Dashboard() {
@@ -21,6 +29,13 @@ export function Dashboard() {
     totalChecklists: 0,
     totalTips: 0,
     readingItems: 0,
+    severityStats: {
+      Critical: 0,
+      High: 0,
+      Medium: 0,
+      Low: 0,
+      Informational: 0,
+    },
   });
 
   useEffect(() => {
@@ -36,13 +51,30 @@ export function Dashboard() {
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId);
 
-      // Fetch user's bugs count and total bounties
+      // Fetch user's bugs count, total bounties, and severity distribution
       const { data: bugs } = await supabase
         .from('bugs')
-        .select('bounty_amount')
+        .select('bounty_amount, severity')
         .eq('user_id', userId);
 
       const totalBounties = bugs?.reduce((sum, bug) => sum + (bug.bounty_amount || 0), 0) || 0;
+      
+      const severityStats = bugs?.reduce((acc, bug) => {
+        acc[bug.severity as keyof typeof acc] = (acc[bug.severity as keyof typeof acc] || 0) + 1;
+        return acc;
+      }, {
+        Critical: 0,
+        High: 0,
+        Medium: 0,
+        Low: 0,
+        Informational: 0,
+      }) || {
+        Critical: 0,
+        High: 0,
+        Medium: 0,
+        Low: 0,
+        Informational: 0,
+      };
 
       // Fetch other stats
       const { count: checklistsCount } = await supabase
@@ -67,6 +99,7 @@ export function Dashboard() {
         totalChecklists: checklistsCount || 0,
         totalTips: tipsCount || 0,
         readingItems: readingCount || 0,
+        severityStats,
       });
     };
 
@@ -150,7 +183,7 @@ export function Dashboard() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="bg-gray-800 border-gray-700">
           <CardHeader>
             <CardTitle className="text-white">Quick Actions</CardTitle>
@@ -187,22 +220,28 @@ export function Dashboard() {
           <CardContent className="space-y-4">
             <div className="flex justify-between items-center">
               <span className="text-gray-300">Critical</span>
-              <span className="text-red-400 font-bold">0</span>
+              <span className="text-red-400 font-bold">{stats.severityStats.Critical}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-300">High</span>
-              <span className="text-orange-400 font-bold">0</span>
+              <span className="text-orange-400 font-bold">{stats.severityStats.High}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-300">Medium</span>
-              <span className="text-yellow-400 font-bold">0</span>
+              <span className="text-yellow-400 font-bold">{stats.severityStats.Medium}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-300">Low</span>
-              <span className="text-green-400 font-bold">0</span>
+              <span className="text-green-400 font-bold">{stats.severityStats.Low}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-300">Informational</span>
+              <span className="text-blue-400 font-bold">{stats.severityStats.Informational}</span>
             </div>
           </CardContent>
         </Card>
+
+        <QuickNote />
       </div>
     </div>
   );
