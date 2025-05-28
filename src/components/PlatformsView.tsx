@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -263,7 +262,6 @@ export function PlatformsView() {
       <BugReportModal
         isOpen={showBugModal}
         onClose={() => setShowBugModal(false)}
-        programs={programs}
         onSave={fetchData}
       />
     </div>
