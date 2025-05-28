@@ -21,14 +21,14 @@ export function QuickNote() {
     if (!user.data.user) return;
 
     const { data } = await supabase
-      .from('personal_notes')
+      .from('personal_notes' as any)
       .select('*')
       .eq('user_id', user.data.user.id)
       .eq('title', 'Quick Note')
       .single();
 
     if (data) {
-      setContent(data.content || '');
+      setContent((data as any).content || '');
     }
   };
 
@@ -40,7 +40,7 @@ export function QuickNote() {
 
     // Check if quick note already exists
     const { data: existingNote } = await supabase
-      .from('personal_notes')
+      .from('personal_notes' as any)
       .select('*')
       .eq('user_id', user.data.user.id)
       .eq('title', 'Quick Note')
@@ -49,15 +49,15 @@ export function QuickNote() {
     let error;
     if (existingNote) {
       ({ error } = await supabase
-        .from('personal_notes')
+        .from('personal_notes' as any)
         .update({
           content: content,
           updated_at: new Date().toISOString()
         })
-        .eq('id', existingNote.id));
+        .eq('id', (existingNote as any).id));
     } else {
       ({ error } = await supabase
-        .from('personal_notes')
+        .from('personal_notes' as any)
         .insert({
           title: 'Quick Note',
           content: content,

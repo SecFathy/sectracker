@@ -44,13 +44,13 @@ export function UsefulLinksView() {
     if (!user.data.user) return;
 
     const { data, error } = await supabase
-      .from('link_categories')
+      .from('link_categories' as any)
       .select('*')
       .eq('user_id', user.data.user.id)
       .order('name');
 
     if (!error) {
-      setCategories(data || []);
+      setCategories(data as LinkCategory[] || []);
     }
   };
 
@@ -59,7 +59,7 @@ export function UsefulLinksView() {
     if (!user.data.user) return;
 
     const { data, error } = await supabase
-      .from('useful_links')
+      .from('useful_links' as any)
       .select('*')
       .eq('user_id', user.data.user.id)
       .order('created_at', { ascending: false });
@@ -71,7 +71,7 @@ export function UsefulLinksView() {
         variant: "destructive"
       });
     } else {
-      setLinks(data || []);
+      setLinks(data as UsefulLink[] || []);
     }
   };
 
@@ -81,7 +81,7 @@ export function UsefulLinksView() {
 
     if (link.id) {
       const { error } = await supabase
-        .from('useful_links')
+        .from('useful_links' as any)
         .update({
           title: link.title,
           url: link.url,
@@ -107,7 +107,7 @@ export function UsefulLinksView() {
       }
     } else {
       const { error } = await supabase
-        .from('useful_links')
+        .from('useful_links' as any)
         .insert({
           title: link.title,
           url: link.url,
@@ -136,7 +136,7 @@ export function UsefulLinksView() {
 
   const deleteLink = async (id: string) => {
     const { error } = await supabase
-      .from('useful_links')
+      .from('useful_links' as any)
       .delete()
       .eq('id', id);
 
@@ -160,7 +160,7 @@ export function UsefulLinksView() {
     if (!user.data.user || !newCategoryName.trim()) return;
 
     const { error } = await supabase
-      .from('link_categories')
+      .from('link_categories' as any)
       .insert({
         name: newCategoryName.trim(),
         user_id: user.data.user.id
@@ -180,31 +180,6 @@ export function UsefulLinksView() {
       fetchCategories();
       setNewCategoryName('');
       setShowNewCategory(false);
-    }
-  };
-
-  const deleteCategory = async (categoryName: string) => {
-    const user = await supabase.auth.getUser();
-    if (!user.data.user) return;
-
-    const { error } = await supabase
-      .from('link_categories')
-      .delete()
-      .eq('user_id', user.data.user.id)
-      .eq('name', categoryName);
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete category",
-        variant: "destructive"
-      });
-    } else {
-      toast({
-        title: "Success",
-        description: "Category deleted successfully"
-      });
-      fetchCategories();
     }
   };
 

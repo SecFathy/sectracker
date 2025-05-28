@@ -33,7 +33,7 @@ export function PersonalNotesView() {
     if (!user.data.user) return;
 
     const { data, error } = await supabase
-      .from('personal_notes')
+      .from('personal_notes' as any)
       .select('*')
       .eq('user_id', user.data.user.id)
       .order('updated_at', { ascending: false });
@@ -45,7 +45,7 @@ export function PersonalNotesView() {
         variant: "destructive"
       });
     } else {
-      setNotes(data || []);
+      setNotes(data as PersonalNote[] || []);
     }
   };
 
@@ -55,7 +55,7 @@ export function PersonalNotesView() {
 
     if (note.id) {
       const { error } = await supabase
-        .from('personal_notes')
+        .from('personal_notes' as any)
         .update({
           title: note.title,
           content: note.content,
@@ -79,7 +79,7 @@ export function PersonalNotesView() {
       }
     } else {
       const { error } = await supabase
-        .from('personal_notes')
+        .from('personal_notes' as any)
         .insert({
           title: note.title,
           content: note.content,
@@ -106,7 +106,7 @@ export function PersonalNotesView() {
 
   const deleteNote = async (id: string) => {
     const { error } = await supabase
-      .from('personal_notes')
+      .from('personal_notes' as any)
       .delete()
       .eq('id', id);
 
