@@ -66,6 +66,8 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
                 }
               }}
               providers={[]}
+              view="sign_in"
+              showLinks={true}
             />
           </div>
         </div>
