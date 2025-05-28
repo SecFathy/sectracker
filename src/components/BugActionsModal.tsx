@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -48,8 +47,8 @@ export function BugActionsModal({ bug, isOpen, onClose, onSave, mode }: BugActio
     program_id: '',
     title: '',
     description: '',
-    severity: 'Medium' as const,
-    status: 'Draft' as const,
+    severity: 'Medium' as 'Critical' | 'High' | 'Medium' | 'Low' | 'Informational',
+    status: 'Draft' as 'Draft' | 'Submitted' | 'Triaged' | 'Accepted' | 'Duplicate' | 'Not Applicable' | 'Resolved' | 'Bounty Awarded',
     vulnerability_type: '',
     poc_steps: '',
     impact_description: '',
@@ -233,245 +232,243 @@ export function BugActionsModal({ bug, isOpen, onClose, onSave, mode }: BugActio
     }
   };
 
-  if (mode === 'delete') {
-    return (
-      <AlertDialog open={isOpen} onOpenChange={onClose}>
-        <AlertDialogContent className="bg-gray-800 border-gray-700">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Delete Bug Report</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-300">
-              Are you sure you want to delete "{bug?.title}"? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="border-gray-600">Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDelete}
-              disabled={loading}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {loading ? 'Deleting...' : 'Delete'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    );
-  }
-
-  if (mode === 'archive') {
-    return (
-      <AlertDialog open={isOpen} onOpenChange={onClose}>
-        <AlertDialogContent className="bg-gray-800 border-gray-700">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Archive Bug Report</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-300">
-              Are you sure you want to archive "{bug?.title}"? This will mark it as resolved.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="border-gray-600">Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleArchive}
-              disabled={loading}
-              className="bg-yellow-600 hover:bg-yellow-700"
-            >
-              {loading ? 'Archiving...' : 'Archive'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    );
-  }
-
-  if (mode === 'unarchive') {
-    return (
-      <AlertDialog open={isOpen} onOpenChange={onClose}>
-        <AlertDialogContent className="bg-gray-800 border-gray-700">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Unarchive Bug Report</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-300">
-              Are you sure you want to unarchive "{bug?.title}"? This will mark it as submitted.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="border-gray-600">Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleUnarchive}
-              disabled={loading}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              {loading ? 'Unarchiving...' : 'Unarchive'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    );
-  }
-
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Edit Bug Report</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleEdit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="program">Program</Label>
-              <Select value={formData.program_id} onValueChange={(value) => setFormData({...formData, program_id: value})}>
-                <SelectTrigger className="bg-gray-700 border-gray-600">
-                  <SelectValue placeholder="Select a program" />
-                </SelectTrigger>
-                <SelectContent className="bg-gray-700 border-gray-600">
-                  {programs.map((program) => (
-                    <SelectItem key={program.id} value={program.id}>
-                      {program.company} - {program.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+    <>
+      {mode === 'delete' && (
+        <AlertDialog open={isOpen} onOpenChange={onClose}>
+          <AlertDialogContent className="bg-gray-800 border-gray-700">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-white">Delete Bug Report</AlertDialogTitle>
+              <AlertDialogDescription className="text-gray-300">
+                Are you sure you want to delete "{bug?.title}"? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="border-gray-600">Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDelete}
+                disabled={loading}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {loading ? 'Deleting...' : 'Delete'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
 
-            <div>
-              <Label htmlFor="severity">Severity</Label>
-              <Select value={formData.severity} onValueChange={(value: any) => setFormData({...formData, severity: value})}>
-                <SelectTrigger className="bg-gray-700 border-gray-600">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-gray-700 border-gray-600">
-                  <SelectItem value="Critical">Critical</SelectItem>
-                  <SelectItem value="High">High</SelectItem>
-                  <SelectItem value="Medium">Medium</SelectItem>
-                  <SelectItem value="Low">Low</SelectItem>
-                  <SelectItem value="Informational">Informational</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+      {mode === 'archive' && (
+        <AlertDialog open={isOpen} onOpenChange={onClose}>
+          <AlertDialogContent className="bg-gray-800 border-gray-700">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-white">Archive Bug Report</AlertDialogTitle>
+              <AlertDialogDescription className="text-gray-300">
+                Are you sure you want to archive "{bug?.title}"? This will mark it as resolved.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="border-gray-600">Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleArchive}
+                disabled={loading}
+                className="bg-yellow-600 hover:bg-yellow-700"
+              >
+                {loading ? 'Archiving...' : 'Archive'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="status">Status</Label>
-              <Select value={formData.status} onValueChange={(value: any) => setFormData({...formData, status: value})}>
-                <SelectTrigger className="bg-gray-700 border-gray-600">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-gray-700 border-gray-600">
-                  <SelectItem value="Draft">Draft</SelectItem>
-                  <SelectItem value="Submitted">Submitted</SelectItem>
-                  <SelectItem value="Triaged">Triaged</SelectItem>
-                  <SelectItem value="Accepted">Accepted</SelectItem>
-                  <SelectItem value="Duplicate">Duplicate</SelectItem>
-                  <SelectItem value="Not Applicable">Not Applicable</SelectItem>
-                  <SelectItem value="Resolved">Resolved</SelectItem>
-                  <SelectItem value="Bounty Awarded">Bounty Awarded</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+      {mode === 'unarchive' && (
+        <AlertDialog open={isOpen} onOpenChange={onClose}>
+          <AlertDialogContent className="bg-gray-800 border-gray-700">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-white">Unarchive Bug Report</AlertDialogTitle>
+              <AlertDialogDescription className="text-gray-300">
+                Are you sure you want to unarchive "{bug?.title}"? This will mark it as submitted.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="border-gray-600">Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleUnarchive}
+                disabled={loading}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {loading ? 'Unarchiving...' : 'Unarchive'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
 
-            <div>
-              <Label htmlFor="vulnerability_type">Vulnerability Type</Label>
-              <Input
-                id="vulnerability_type"
-                value={formData.vulnerability_type}
-                onChange={(e) => setFormData({...formData, vulnerability_type: e.target.value})}
-                className="bg-gray-700 border-gray-600"
-                placeholder="e.g., XSS, SQL Injection, CSRF"
-              />
-            </div>
-          </div>
+      {mode === 'edit' && (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+          <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Bug Report</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleEdit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="program">Program</Label>
+                  <Select value={formData.program_id} onValueChange={(value) => setFormData({...formData, program_id: value})}>
+                    <SelectTrigger className="bg-gray-700 border-gray-600">
+                      <SelectValue placeholder="Select a program" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-700 border-gray-600">
+                      {programs.map((program) => (
+                        <SelectItem key={program.id} value={program.id}>
+                          {program.company} - {program.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-          <div>
-            <Label htmlFor="title">Title</Label>
-            <Input
-              id="title"
-              value={formData.title}
-              onChange={(e) => setFormData({...formData, title: e.target.value})}
-              className="bg-gray-700 border-gray-600"
-              required
-            />
-          </div>
+                <div>
+                  <Label htmlFor="severity">Severity</Label>
+                  <Select value={formData.severity} onValueChange={(value: any) => setFormData({...formData, severity: value})}>
+                    <SelectTrigger className="bg-gray-700 border-gray-600">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-700 border-gray-600">
+                      <SelectItem value="Critical">Critical</SelectItem>
+                      <SelectItem value="High">High</SelectItem>
+                      <SelectItem value="Medium">Medium</SelectItem>
+                      <SelectItem value="Low">Low</SelectItem>
+                      <SelectItem value="Informational">Informational</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
 
-          <div>
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({...formData, description: e.target.value})}
-              className="bg-gray-700 border-gray-600"
-              rows={3}
-            />
-          </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="status">Status</Label>
+                  <Select value={formData.status} onValueChange={(value: any) => setFormData({...formData, status: value})}>
+                    <SelectTrigger className="bg-gray-700 border-gray-600">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-700 border-gray-600">
+                      <SelectItem value="Draft">Draft</SelectItem>
+                      <SelectItem value="Submitted">Submitted</SelectItem>
+                      <SelectItem value="Triaged">Triaged</SelectItem>
+                      <SelectItem value="Accepted">Accepted</SelectItem>
+                      <SelectItem value="Duplicate">Duplicate</SelectItem>
+                      <SelectItem value="Not Applicable">Not Applicable</SelectItem>
+                      <SelectItem value="Resolved">Resolved</SelectItem>
+                      <SelectItem value="Bounty Awarded">Bounty Awarded</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-          <div>
-            <Label htmlFor="poc_steps">Proof of Concept Steps</Label>
-            <Textarea
-              id="poc_steps"
-              value={formData.poc_steps}
-              onChange={(e) => setFormData({...formData, poc_steps: e.target.value})}
-              className="bg-gray-700 border-gray-600"
-              rows={4}
-              placeholder="Step-by-step reproduction steps..."
-            />
-          </div>
+                <div>
+                  <Label htmlFor="vulnerability_type">Vulnerability Type</Label>
+                  <Input
+                    id="vulnerability_type"
+                    value={formData.vulnerability_type}
+                    onChange={(e) => setFormData({...formData, vulnerability_type: e.target.value})}
+                    className="bg-gray-700 border-gray-600"
+                    placeholder="e.g., XSS, SQL Injection, CSRF"
+                  />
+                </div>
+              </div>
 
-          <div>
-            <Label htmlFor="impact_description">Impact Description</Label>
-            <Textarea
-              id="impact_description"
-              value={formData.impact_description}
-              onChange={(e) => setFormData({...formData, impact_description: e.target.value})}
-              className="bg-gray-700 border-gray-600"
-              rows={3}
-            />
-          </div>
+              <div>
+                <Label htmlFor="title">Title</Label>
+                <Input
+                  id="title"
+                  value={formData.title}
+                  onChange={(e) => setFormData({...formData, title: e.target.value})}
+                  className="bg-gray-700 border-gray-600"
+                  required
+                />
+              </div>
 
-          <div>
-            <Label htmlFor="remediation_suggestion">Remediation Suggestion</Label>
-            <Textarea
-              id="remediation_suggestion"
-              value={formData.remediation_suggestion}
-              onChange={(e) => setFormData({...formData, remediation_suggestion: e.target.value})}
-              className="bg-gray-700 border-gray-600"
-              rows={3}
-            />
-          </div>
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  className="bg-gray-700 border-gray-600"
+                  rows={3}
+                />
+              </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="bounty_amount">Bounty Amount ($)</Label>
-              <Input
-                id="bounty_amount"
-                type="number"
-                step="0.01"
-                value={formData.bounty_amount}
-                onChange={(e) => setFormData({...formData, bounty_amount: parseFloat(e.target.value) || 0})}
-                className="bg-gray-700 border-gray-600"
-              />
-            </div>
+              <div>
+                <Label htmlFor="poc_steps">Proof of Concept Steps</Label>
+                <Textarea
+                  id="poc_steps"
+                  value={formData.poc_steps}
+                  onChange={(e) => setFormData({...formData, poc_steps: e.target.value})}
+                  className="bg-gray-700 border-gray-600"
+                  rows={4}
+                  placeholder="Step-by-step reproduction steps..."
+                />
+              </div>
 
-            <div>
-              <Label htmlFor="submission_date">Submission Date</Label>
-              <Input
-                id="submission_date"
-                type="date"
-                value={formData.submission_date}
-                onChange={(e) => setFormData({...formData, submission_date: e.target.value})}
-                className="bg-gray-700 border-gray-600"
-              />
-            </div>
-          </div>
+              <div>
+                <Label htmlFor="impact_description">Impact Description</Label>
+                <Textarea
+                  id="impact_description"
+                  value={formData.impact_description}
+                  onChange={(e) => setFormData({...formData, impact_description: e.target.value})}
+                  className="bg-gray-700 border-gray-600"
+                  rows={3}
+                />
+              </div>
 
-          <div className="flex justify-end space-x-2">
-            <Button type="button" variant="outline" onClick={onClose} className="border-gray-600">
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading} className="bg-cyan-600 hover:bg-cyan-700">
-              {loading ? 'Updating...' : 'Update Bug Report'}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+              <div>
+                <Label htmlFor="remediation_suggestion">Remediation Suggestion</Label>
+                <Textarea
+                  id="remediation_suggestion"
+                  value={formData.remediation_suggestion}
+                  onChange={(e) => setFormData({...formData, remediation_suggestion: e.target.value})}
+                  className="bg-gray-700 border-gray-600"
+                  rows={3}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="bounty_amount">Bounty Amount ($)</Label>
+                  <Input
+                    id="bounty_amount"
+                    type="number"
+                    step="0.01"
+                    value={formData.bounty_amount}
+                    onChange={(e) => setFormData({...formData, bounty_amount: parseFloat(e.target.value) || 0})}
+                    className="bg-gray-700 border-gray-600"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="submission_date">Submission Date</Label>
+                  <Input
+                    id="submission_date"
+                    type="date"
+                    value={formData.submission_date}
+                    onChange={(e) => setFormData({...formData, submission_date: e.target.value})}
+                    className="bg-gray-700 border-gray-600"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-2">
+                <Button type="button" variant="outline" onClick={onClose} className="border-gray-600">
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={loading} className="bg-cyan-600 hover:bg-cyan-700">
+                  {loading ? 'Updating...' : 'Update Bug Report'}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
+    </>
   );
 }

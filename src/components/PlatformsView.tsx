@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -56,6 +57,9 @@ interface Bug {
   bounty_amount: number;
   submission_date: string;
   vulnerability_type: string;
+  poc_steps: string | null;
+  impact_description: string | null;
+  remediation_suggestion: string | null;
   program: Program;
 }
 
