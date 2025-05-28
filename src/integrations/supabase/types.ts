@@ -9,7 +9,341 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      bugs: {
+        Row: {
+          bounty_amount: number | null
+          created_at: string | null
+          description: string | null
+          id: string
+          impact_description: string | null
+          poc_steps: string | null
+          program_id: string | null
+          remediation_suggestion: string | null
+          resolution_date: string | null
+          severity: Database["public"]["Enums"]["bug_severity"]
+          status: Database["public"]["Enums"]["bug_status"]
+          submission_date: string | null
+          title: string
+          updated_at: string | null
+          user_id: string
+          vulnerability_type: string | null
+        }
+        Insert: {
+          bounty_amount?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          impact_description?: string | null
+          poc_steps?: string | null
+          program_id?: string | null
+          remediation_suggestion?: string | null
+          resolution_date?: string | null
+          severity: Database["public"]["Enums"]["bug_severity"]
+          status?: Database["public"]["Enums"]["bug_status"]
+          submission_date?: string | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+          vulnerability_type?: string | null
+        }
+        Update: {
+          bounty_amount?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          impact_description?: string | null
+          poc_steps?: string | null
+          program_id?: string | null
+          remediation_suggestion?: string | null
+          resolution_date?: string | null
+          severity?: Database["public"]["Enums"]["bug_severity"]
+          status?: Database["public"]["Enums"]["bug_status"]
+          submission_date?: string | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+          vulnerability_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bugs_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checklist_items: {
+        Row: {
+          checklist_id: string | null
+          created_at: string | null
+          id: string
+          is_completed: boolean | null
+          order_index: number | null
+          text: string
+        }
+        Insert: {
+          checklist_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_completed?: boolean | null
+          order_index?: number | null
+          text: string
+        }
+        Update: {
+          checklist_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_completed?: boolean | null
+          order_index?: number | null
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_items_checklist_id_fkey"
+            columns: ["checklist_id"]
+            isOneToOne: false
+            referencedRelation: "security_checklists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platforms: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          platform_type: Database["public"]["Enums"]["platform_type"]
+          updated_at: string | null
+          url: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          platform_type?: Database["public"]["Enums"]["platform_type"]
+          updated_at?: string | null
+          url?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          platform_type?: Database["public"]["Enums"]["platform_type"]
+          updated_at?: string | null
+          url?: string | null
+        }
+        Relationships: []
+      }
+      programs: {
+        Row: {
+          company: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          max_bounty: number | null
+          min_bounty: number | null
+          name: string
+          platform_id: string | null
+          program_url: string | null
+          scope: string
+          updated_at: string | null
+        }
+        Insert: {
+          company: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_bounty?: number | null
+          min_bounty?: number | null
+          name: string
+          platform_id?: string | null
+          program_url?: string | null
+          scope: string
+          updated_at?: string | null
+        }
+        Update: {
+          company?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_bounty?: number | null
+          min_bounty?: number | null
+          name?: string
+          platform_id?: string | null
+          program_url?: string | null
+          scope?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "programs_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "platforms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reading_list: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_read: boolean | null
+          priority: number | null
+          title: string
+          updated_at: string | null
+          url: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_read?: boolean | null
+          priority?: number | null
+          title: string
+          updated_at?: string | null
+          url: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_read?: boolean | null
+          priority?: number | null
+          title?: string
+          updated_at?: string | null
+          url?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      security_checklists: {
+        Row: {
+          checklist_type: string
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          checklist_type: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          checklist_type?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      security_tips: {
+        Row: {
+          category: string | null
+          content: string
+          created_at: string | null
+          id: string
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          content: string
+          created_at?: string | null
+          id?: string
+          tags?: string[] | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          content?: string
+          created_at?: string | null
+          id?: string
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_platform_profiles: {
+        Row: {
+          bugs_accepted: number | null
+          bugs_submitted: number | null
+          created_at: string | null
+          id: string
+          platform_id: string | null
+          profile_url: string | null
+          rank_position: string | null
+          reputation_points: number | null
+          total_bounties_earned: number | null
+          updated_at: string | null
+          user_id: string
+          username: string
+        }
+        Insert: {
+          bugs_accepted?: number | null
+          bugs_submitted?: number | null
+          created_at?: string | null
+          id?: string
+          platform_id?: string | null
+          profile_url?: string | null
+          rank_position?: string | null
+          reputation_points?: number | null
+          total_bounties_earned?: number | null
+          updated_at?: string | null
+          user_id: string
+          username: string
+        }
+        Update: {
+          bugs_accepted?: number | null
+          bugs_submitted?: number | null
+          created_at?: string | null
+          id?: string
+          platform_id?: string | null
+          profile_url?: string | null
+          rank_position?: string | null
+          reputation_points?: number | null
+          total_bounties_earned?: number | null
+          updated_at?: string | null
+          user_id?: string
+          username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_platform_profiles_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "platforms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -18,7 +352,17 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      bug_severity: "Critical" | "High" | "Medium" | "Low" | "Informational"
+      bug_status:
+        | "Draft"
+        | "Submitted"
+        | "Triaged"
+        | "Accepted"
+        | "Duplicate"
+        | "Not Applicable"
+        | "Resolved"
+        | "Bounty Awarded"
+      platform_type: "bug_bounty" | "vdp" | "private" | "ctf"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +477,19 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      bug_severity: ["Critical", "High", "Medium", "Low", "Informational"],
+      bug_status: [
+        "Draft",
+        "Submitted",
+        "Triaged",
+        "Accepted",
+        "Duplicate",
+        "Not Applicable",
+        "Resolved",
+        "Bounty Awarded",
+      ],
+      platform_type: ["bug_bounty", "vdp", "private", "ctf"],
+    },
   },
 } as const

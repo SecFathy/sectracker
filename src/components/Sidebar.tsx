@@ -1,7 +1,9 @@
 
 import React from 'react';
-import { Shield, Bug, CheckSquare, Lightbulb, BookOpen, BarChart3 } from 'lucide-react';
-import { Sidebar as SidebarUI, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader } from '@/components/ui/sidebar';
+import { Shield, Bug, CheckSquare, Lightbulb, BookOpen, BarChart3, LogOut } from 'lucide-react';
+import { Sidebar as SidebarUI, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter } from '@/components/ui/sidebar';
+import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SidebarProps {
   activeView: string;
@@ -17,11 +19,15 @@ const menuItems = [
 ];
 
 export function Sidebar({ activeView, setActiveView }: SidebarProps) {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
+
   return (
-    <SidebarUI className="border-r border-gray-700 bg-gray-800">
+    <SidebarUI className="border-r border-gray-700 bg-gray-900">
       <SidebarHeader className="p-6 border-b border-gray-700">
         <div className="flex items-center space-x-2">
-          <Shield className="h-8 w-8 text-blue-400" />
+          <Shield className="h-8 w-8 text-cyan-400" />
           <div>
             <h1 className="text-xl font-bold text-white">SecTracker</h1>
             <p className="text-sm text-gray-400">Bug Hunter Platform</p>
@@ -41,8 +47,8 @@ export function Sidebar({ activeView, setActiveView }: SidebarProps) {
                     onClick={() => setActiveView(item.id)}
                     className={`w-full justify-start transition-colors ${
                       activeView === item.id 
-                        ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                        : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                        ? 'bg-cyan-600 text-white hover:bg-cyan-700' 
+                        : 'text-gray-300 hover:bg-gray-800 hover:text-white'
                     }`}
                   >
                     <item.icon className="h-5 w-5" />
@@ -54,6 +60,16 @@ export function Sidebar({ activeView, setActiveView }: SidebarProps) {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter className="p-4 border-t border-gray-700">
+        <Button 
+          onClick={handleLogout}
+          variant="outline" 
+          className="w-full border-gray-600 text-gray-300 hover:bg-gray-800"
+        >
+          <LogOut className="h-4 w-4 mr-2" />
+          Logout
+        </Button>
+      </SidebarFooter>
     </SidebarUI>
   );
 }

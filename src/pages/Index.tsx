@@ -7,6 +7,7 @@ import { ChecklistsView } from '@/components/ChecklistsView';
 import { TipsView } from '@/components/TipsView';
 import { ReadingListView } from '@/components/ReadingListView';
 import { SidebarProvider } from '@/components/ui/sidebar';
+import { AuthWrapper } from '@/components/AuthWrapper';
 
 const Index = () => {
   const [activeView, setActiveView] = React.useState('dashboard');
@@ -29,16 +30,18 @@ const Index = () => {
   };
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-gray-900">
-        <Sidebar activeView={activeView} setActiveView={setActiveView} />
-        <main className="flex-1 overflow-auto">
-          <div className="p-6">
-            {renderView()}
-          </div>
-        </main>
-      </div>
-    </SidebarProvider>
+    <AuthWrapper>
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full bg-gray-900">
+          <Sidebar activeView={activeView} setActiveView={setActiveView} />
+          <main className="flex-1 overflow-auto">
+            <div className="p-6">
+              {renderView()}
+            </div>
+          </main>
+        </div>
+      </SidebarProvider>
+    </AuthWrapper>
   );
 };
 
