@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,13 +43,13 @@ export function UsefulLinksView() {
     if (!user.data.user) return;
 
     const { data, error } = await supabase
-      .from('link_categories' as any)
+      .from('link_categories')
       .select('*')
       .eq('user_id', user.data.user.id)
       .order('name');
 
     if (!error) {
-      setCategories(data as LinkCategory[] || []);
+      setCategories(data || []);
     }
   };
 
@@ -59,7 +58,7 @@ export function UsefulLinksView() {
     if (!user.data.user) return;
 
     const { data, error } = await supabase
-      .from('useful_links' as any)
+      .from('useful_links')
       .select('*')
       .eq('user_id', user.data.user.id)
       .order('created_at', { ascending: false });
@@ -71,7 +70,7 @@ export function UsefulLinksView() {
         variant: "destructive"
       });
     } else {
-      setLinks(data as UsefulLink[] || []);
+      setLinks(data || []);
     }
   };
 
@@ -81,7 +80,7 @@ export function UsefulLinksView() {
 
     if (link.id) {
       const { error } = await supabase
-        .from('useful_links' as any)
+        .from('useful_links')
         .update({
           title: link.title,
           url: link.url,
@@ -107,7 +106,7 @@ export function UsefulLinksView() {
       }
     } else {
       const { error } = await supabase
-        .from('useful_links' as any)
+        .from('useful_links')
         .insert({
           title: link.title,
           url: link.url,
@@ -136,7 +135,7 @@ export function UsefulLinksView() {
 
   const deleteLink = async (id: string) => {
     const { error } = await supabase
-      .from('useful_links' as any)
+      .from('useful_links')
       .delete()
       .eq('id', id);
 
@@ -160,7 +159,7 @@ export function UsefulLinksView() {
     if (!user.data.user || !newCategoryName.trim()) return;
 
     const { error } = await supabase
-      .from('link_categories' as any)
+      .from('link_categories')
       .insert({
         name: newCategoryName.trim(),
         user_id: user.data.user.id

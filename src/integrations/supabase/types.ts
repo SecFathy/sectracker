@@ -109,6 +109,54 @@ export type Database = {
           },
         ]
       }
+      link_categories: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      personal_notes: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       platforms: {
         Row: {
           created_at: string | null
@@ -287,6 +335,39 @@ export type Database = {
           tags?: string[] | null
           title?: string
           updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      useful_links: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          id: string
+          title: string
+          updated_at: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          title: string
+          updated_at?: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          title?: string
+          updated_at?: string
+          url?: string
           user_id?: string
         }
         Relationships: []
