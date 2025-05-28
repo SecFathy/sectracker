@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -86,6 +85,23 @@ export function useRSSData() {
         toast({
           title: "Error",
           description: "You must be logged in to add articles to reading list",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Check if article already exists in reading list
+      const { data: existingArticle } = await supabase
+        .from('reading_list')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('url', article.link)
+        .single();
+
+      if (existingArticle) {
+        toast({
+          title: "Already added",
+          description: "This article is already in your reading list",
           variant: "destructive"
         });
         return;

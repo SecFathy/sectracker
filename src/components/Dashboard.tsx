@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Bug, Shield, CheckSquare, Lightbulb, Target, Trophy } from 'lucide-react';
@@ -59,12 +58,28 @@ export function Dashboard() {
     'reading'
   ]);
 
+  const [userName, setUserName] = useState('Security Researcher');
+
   useEffect(() => {
     const fetchStats = async () => {
       const user = await supabase.auth.getUser();
       if (!user.data.user) return;
 
       const userId = user.data.user.id;
+
+      // Fetch user profile to get name
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('first_name, last_name')
+        .eq('id', userId)
+        .single();
+
+      if (profile) {
+        const displayName = [profile.first_name, profile.last_name]
+          .filter(Boolean)
+          .join(' ') || 'Security Researcher';
+        setUserName(displayName);
+      }
 
       // Fetch user's platform profiles count
       const { count: platformsCount } = await supabase
@@ -197,7 +212,7 @@ export function Dashboard() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-white">Dashboard</h1>
         <div className="text-sm text-gray-400">
-          Welcome back, Security Researcher
+          Welcome back, {userName}
         </div>
       </div>
 
