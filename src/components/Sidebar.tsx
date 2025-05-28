@@ -26,8 +26,8 @@ export function Sidebar({ activeView, setActiveView }: SidebarProps) {
   };
 
   return (
-    <SidebarUI className="border-r border-gray-700 bg-gray-900">
-      <SidebarHeader className="p-6 border-b border-gray-700">
+    <SidebarUI className="border-r border-gray-700" style={{ backgroundColor: 'rgb(17, 24, 39)' }}>
+      <SidebarHeader className="p-6 border-b border-gray-700" style={{ backgroundColor: 'rgb(17, 24, 39)' }}>
         <div className="flex items-center space-x-2">
           <Shield className="h-8 w-8 text-cyan-400" />
           <div>
@@ -36,7 +36,7 @@ export function Sidebar({ activeView, setActiveView }: SidebarProps) {
           </div>
         </div>
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent style={{ backgroundColor: 'rgb(17, 24, 39)' }}>
         <SidebarGroup>
           <SidebarGroupLabel className="text-gray-400 text-xs uppercase tracking-wider">
             Navigation
@@ -62,7 +62,7 @@ export function Sidebar({ activeView, setActiveView }: SidebarProps) {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="p-4 border-t border-gray-700">
+      <SidebarFooter className="p-4 border-t border-gray-700" style={{ backgroundColor: 'rgb(17, 24, 39)' }}>
         <Button 
           onClick={handleLogout}
           variant="outline" 

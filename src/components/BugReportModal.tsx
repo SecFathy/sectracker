@@ -74,6 +74,7 @@ export function BugReportModal({ isOpen, onClose, onSave }: BugReportModalProps)
       const bugData = {
         ...formData,
         user_id: user.id,
+        program_id: formData.program_id || null, // Convert empty string to null
         submission_date: formData.submission_date || null,
       };
 
