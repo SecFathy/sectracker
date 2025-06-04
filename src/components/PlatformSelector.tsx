@@ -13,14 +13,14 @@ interface PlatformSelectorProps {
 export function PlatformSelector({ platforms, selectedPlatformId, onPlatformChange }: PlatformSelectorProps) {
   return (
     <div>
-      <Label htmlFor="platform">Platform</Label>
+      <Label htmlFor="platform" className="text-green-400 font-mono">Platform</Label>
       <Select value={selectedPlatformId} onValueChange={onPlatformChange}>
-        <SelectTrigger className="bg-gray-700 border-gray-600">
+        <SelectTrigger className="bg-black border-green-600 text-green-400 font-mono">
           <SelectValue placeholder="Select a platform" />
         </SelectTrigger>
-        <SelectContent className="bg-gray-700 border-gray-600">
+        <SelectContent className="bg-black border-green-600 text-green-400 font-mono">
           {platforms.map((platform) => (
-            <SelectItem key={platform.id} value={platform.id}>
+            <SelectItem key={platform.id} value={platform.id} className="hover:bg-green-950/50">
               {platform.name}
             </SelectItem>
           ))}
