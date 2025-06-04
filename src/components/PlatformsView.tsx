@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Bug, Target, User } from 'lucide-react';
+import { Plus, Bug, Target, User, ExternalLink, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { PlatformModal } from '@/components/PlatformModal';
 import { PlatformProfileModal } from '@/components/PlatformProfileModal';
@@ -14,6 +14,7 @@ import { BugFilters } from '@/components/BugFilters';
 import { BugReportCard } from '@/components/BugReportCard';
 import { Database } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
 
 interface Platform {
   id: string;
@@ -185,10 +186,22 @@ export function PlatformsView() {
     setShowBugActions(true);
   };
 
+  // Separate platforms into those with profiles and those without
+  const platformsWithProfiles = platforms.filter(platform => 
+    userProfiles.some(profile => profile.platform_id === platform.id)
+  );
+  
+  const platformsWithoutProfiles = platforms.filter(platform => 
+    !userProfiles.some(profile => profile.platform_id === platform.id)
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-white">Platforms & Bug Reports</h1>
+        <div>
+          <h1 className="text-3xl font-bold text-white">Platforms & Bug Reports</h1>
+          <p className="text-gray-400 mt-1">Manage your bug bounty platforms and track your progress</p>
+        </div>
         <div className="flex space-x-2">
           <Button 
             onClick={() => setShowPlatformModal(true)}
@@ -221,17 +234,162 @@ export function PlatformsView() {
         </div>
       </div>
 
-      {/* User Platform Profiles */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {userProfiles.map((profile) => (
-          <PlatformProfileCard key={profile.id} profile={profile} />
-        ))}
+      {/* Platforms Overview Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="bg-gray-800 border-gray-700">
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-cyan-600 rounded-lg">
+                <Target className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-white">{platforms.length}</p>
+                <p className="text-sm text-gray-400">Total Platforms</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-gray-800 border-gray-700">
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-green-600 rounded-lg">
+                <Users className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-white">{userProfiles.length}</p>
+                <p className="text-sm text-gray-400">Your Profiles</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-gray-800 border-gray-700">
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-blue-600 rounded-lg">
+                <Bug className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-white">{bugs.length}</p>
+                <p className="text-sm text-gray-400">Total Bugs</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-gray-800 border-gray-700">
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-yellow-600 rounded-lg">
+                <Target className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-white">{programs.length}</p>
+                <p className="text-sm text-gray-400">Active Programs</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Your Platform Profiles */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-white">Your Platform Profiles</h2>
+          <Badge variant="secondary" className="bg-green-600 text-white">
+            {userProfiles.length} Active
+          </Badge>
+        </div>
+        
+        {userProfiles.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {userProfiles.map((profile) => (
+              <PlatformProfileCard key={profile.id} profile={profile} />
+            ))}
+          </div>
+        ) : (
+          <Card className="bg-gray-800 border-gray-700">
+            <CardContent className="p-8 text-center">
+              <Users className="h-12 w-12 text-gray-500 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-white mb-2">No Platform Profiles Yet</h3>
+              <p className="text-gray-400 mb-4">Start by creating a profile on one of the available platforms below.</p>
+              <Button 
+                onClick={() => setShowProfileModal(true)}
+                className="bg-cyan-600 hover:bg-cyan-700"
+              >
+                <User className="h-4 w-4 mr-2" />
+                Create Your First Profile
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Available Platforms */}
+      {platformsWithoutProfiles.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-white">Available Platforms</h2>
+            <Badge variant="outline" className="border-gray-600 text-gray-300">
+              {platformsWithoutProfiles.length} Available
+            </Badge>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {platformsWithoutProfiles.map((platform) => (
+              <Card key={platform.id} className="bg-gray-800 border-gray-700 hover:border-gray-600 transition-colors">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-white flex items-center space-x-2">
+                      <Target className="h-5 w-5 text-gray-400" />
+                      <span className="text-lg">{platform.name}</span>
+                    </CardTitle>
+                    <Badge className="bg-gray-700 text-gray-300 text-xs">
+                      {platform.platform_type}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <p className="text-gray-400 text-sm mb-4 line-clamp-2">
+                    {platform.description || 'Bug bounty platform'}
+                  </p>
+                  <div className="flex space-x-2">
+                    <Button 
+                      onClick={() => setShowProfileModal(true)}
+                      size="sm"
+                      className="bg-cyan-600 hover:bg-cyan-700 flex-1"
+                    >
+                      <User className="h-3 w-3 mr-1" />
+                      Create Profile
+                    </Button>
+                    {platform.url && (
+                      <Button 
+                        onClick={() => window.open(platform.url, '_blank')}
+                        size="sm"
+                        variant="outline"
+                        className="border-gray-600 text-gray-300 hover:bg-gray-700"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Recent Bugs with Filters */}
       <Card className="bg-gray-800 border-gray-700">
         <CardHeader>
-          <CardTitle className="text-white">Recent Bug Reports</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-white">Recent Bug Reports</CardTitle>
+            <Badge variant="secondary" className="bg-blue-600 text-white">
+              {filteredBugs.length} Reports
+            </Badge>
+          </div>
           <BugFilters filters={bugFilters} onFiltersChange={setBugFilters} />
         </CardHeader>
         <CardContent>
@@ -245,14 +403,33 @@ export function PlatformsView() {
               />
             ))}
             {filteredBugs.length === 0 && (
-              <p className="text-gray-400 text-center py-8">
-                {bugs.length === 0 ? "No bug reports yet. Start by adding your first bug report!" : "No bugs match the current filters."}
-              </p>
+              <div className="text-center py-8">
+                <Bug className="h-12 w-12 text-gray-500 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-white mb-2">
+                  {bugs.length === 0 ? "No Bug Reports Yet" : "No Bugs Match Filters"}
+                </h3>
+                <p className="text-gray-400 mb-4">
+                  {bugs.length === 0 
+                    ? "Start by adding your first bug report!" 
+                    : "Try adjusting your filters to see more results."
+                  }
+                </p>
+                {bugs.length === 0 && (
+                  <Button 
+                    onClick={() => setShowBugModal(true)}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Bug className="h-4 w-4 mr-2" />
+                    Add Your First Bug
+                  </Button>
+                )}
+              </div>
             )}
           </div>
         </CardContent>
       </Card>
 
+      {/* Modals */}
       <PlatformModal 
         isOpen={showPlatformModal} 
         onClose={() => setShowPlatformModal(false)}
