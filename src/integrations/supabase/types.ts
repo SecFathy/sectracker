@@ -159,27 +159,36 @@ export type Database = {
       }
       platforms: {
         Row: {
+          category: string | null
           created_at: string | null
           description: string | null
+          favicon_url: string | null
           id: string
+          is_enabled: boolean | null
           name: string
           platform_type: Database["public"]["Enums"]["platform_type"]
           updated_at: string | null
           url: string | null
         }
         Insert: {
+          category?: string | null
           created_at?: string | null
           description?: string | null
+          favicon_url?: string | null
           id?: string
+          is_enabled?: boolean | null
           name: string
           platform_type?: Database["public"]["Enums"]["platform_type"]
           updated_at?: string | null
           url?: string | null
         }
         Update: {
+          category?: string | null
           created_at?: string | null
           description?: string | null
+          favicon_url?: string | null
           id?: string
+          is_enabled?: boolean | null
           name?: string
           platform_type?: Database["public"]["Enums"]["platform_type"]
           updated_at?: string | null

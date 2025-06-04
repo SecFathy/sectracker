@@ -40,24 +40,23 @@ interface PlatformProfile {
   };
 }
 
-interface BugReport {
+interface Bug {
   id: string;
   title: string;
   severity: string;
   status: string;
-  platform_name: string;
   created_at: string;
 }
 
 export function PlatformsView() {
   const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [profiles, setProfiles] = useState<PlatformProfile[]>([]);
-  const [bugReports, setBugReports] = useState<BugReport[]>([]);
+  const [bugs, setBugs] = useState<Bug[]>([]);
   const [stats, setStats] = useState({
     totalPlatforms: 0,
     enabledPlatforms: 0,
     totalProfiles: 0,
-    totalBugReports: 0
+    totalBugs: 0
   });
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -100,17 +99,17 @@ export function PlatformsView() {
 
       if (profilesError) throw profilesError;
 
-      // Fetch bug reports
-      const { data: bugReportsData, error: bugReportsError } = await supabase
-        .from('bug_reports')
+      // Fetch bugs (using correct table name)
+      const { data: bugsData, error: bugsError } = await supabase
+        .from('bugs')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (bugReportsError) throw bugReportsError;
+      if (bugsError) throw bugsError;
 
       setPlatforms(platformsData || []);
       setProfiles(profilesData || []);
-      setBugReports(bugReportsData || []);
+      setBugs(bugsData || []);
 
       // Calculate stats
       const enabledPlatforms = platformsData?.filter(p => p.is_enabled).length || 0;
@@ -118,7 +117,7 @@ export function PlatformsView() {
         totalPlatforms: platformsData?.length || 0,
         enabledPlatforms,
         totalProfiles: profilesData?.length || 0,
-        totalBugReports: bugReportsData?.length || 0
+        totalBugs: bugsData?.length || 0
       });
 
     } catch (error: any) {
@@ -198,7 +197,7 @@ export function PlatformsView() {
         </Card>
         <Card className="bg-gray-800 border-gray-700 text-white">
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-orange-400">{stats.totalBugReports}</div>
+            <div className="text-2xl font-bold text-orange-400">{stats.totalBugs}</div>
             <div className="text-sm text-gray-400">Bug Reports</div>
           </CardContent>
         </Card>
