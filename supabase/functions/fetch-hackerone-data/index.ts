@@ -47,19 +47,24 @@ serve(async (req) => {
 
     const apiToken = api_credentials.api_token
 
-    // Create Basic Auth header
-    const authHeader = btoa(`${username}:${apiToken}`)
-    console.log('Created auth header for username:', username)
+    // Create Basic Auth header - ensure proper encoding
+    const credentials = `${username}:${apiToken}`
+    const authHeader = btoa(credentials)
+    console.log('Testing authentication with username:', username)
 
-    // Test API connection first with a simple request
+    // Test API connection first with the user profile endpoint
     console.log('Testing API connection...')
     const testResponse = await fetch(`https://api.hackerone.com/v1/hackers/${username}`, {
+      method: 'GET',
       headers: {
         'Authorization': `Basic ${authHeader}`,
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'User-Agent': 'HackerOne-Dashboard/1.0'
       }
     })
 
+    console.log('API response status:', testResponse.status)
+    
     if (!testResponse.ok) {
       const errorText = await testResponse.text()
       console.error('API test failed:', testResponse.status, testResponse.statusText, errorText)
@@ -67,7 +72,9 @@ serve(async (req) => {
       if (testResponse.status === 401) {
         throw new Error('Invalid HackerOne credentials. Please check your username and API token.')
       } else if (testResponse.status === 404) {
-        throw new Error('HackerOne profile not found. Please check your username.')
+        throw new Error('HackerOne user profile not found. Please verify your username.')
+      } else if (testResponse.status === 403) {
+        throw new Error('Access forbidden. Please check your API token permissions.')
       } else {
         throw new Error(`HackerOne API error: ${testResponse.status} ${testResponse.statusText}`)
       }
@@ -76,14 +83,16 @@ serve(async (req) => {
     const hackerData = await testResponse.json()
     console.log('Successfully fetched hacker profile')
 
-    // Fetch balance data (optional - don't fail if this doesn't work)
+    // Fetch balance data
     let balanceData = { data: { attributes: { balance: 0 } } }
     try {
       console.log('Fetching balance data...')
       const balanceResponse = await fetch('https://api.hackerone.com/v1/hackers/payments/balance', {
+        method: 'GET',
         headers: {
           'Authorization': `Basic ${authHeader}`,
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'User-Agent': 'HackerOne-Dashboard/1.0'
         }
       })
 
@@ -91,20 +100,23 @@ serve(async (req) => {
         balanceData = await balanceResponse.json()
         console.log('Successfully fetched balance data')
       } else {
-        console.warn('Balance fetch failed:', balanceResponse.status)
+        const balanceError = await balanceResponse.text()
+        console.warn('Balance fetch failed:', balanceResponse.status, balanceError)
       }
     } catch (error) {
       console.warn('Balance fetch error:', error)
     }
 
-    // Fetch reports data (optional - don't fail if this doesn't work)
+    // Fetch reports data
     let reportsData = { data: [] }
     try {
       console.log('Fetching reports data...')
       const reportsResponse = await fetch(`https://api.hackerone.com/v1/hackers/${username}/reports`, {
+        method: 'GET',
         headers: {
           'Authorization': `Basic ${authHeader}`,
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'User-Agent': 'HackerOne-Dashboard/1.0'
         }
       })
 
@@ -112,7 +124,8 @@ serve(async (req) => {
         reportsData = await reportsResponse.json()
         console.log('Successfully fetched reports data')
       } else {
-        console.warn('Reports fetch failed:', reportsResponse.status)
+        const reportsError = await reportsResponse.text()
+        console.warn('Reports fetch failed:', reportsResponse.status, reportsError)
       }
     } catch (error) {
       console.warn('Reports fetch error:', error)
@@ -129,6 +142,9 @@ serve(async (req) => {
     const resolvedReports = reports.filter((r: any) => r.attributes?.state === 'resolved')
     const duplicateReports = reports.filter((r: any) => r.attributes?.state === 'duplicate')
     const notApplicableReports = reports.filter((r: any) => r.attributes?.state === 'not-applicable')
+    const totalBounties = reports
+      .filter((r: any) => r.attributes?.bounty_awarded_at)
+      .reduce((sum: number, r: any) => sum + (r.attributes?.bounty_amount || 0), 0)
 
     const structuredData = {
       user_info: {
@@ -138,8 +154,8 @@ serve(async (req) => {
         impact: hackerAttributes.impact || 0
       },
       bounties: {
-        total_awarded: balanceAttributes.balance || 0,
-        total_count: resolvedReports.length || 0
+        total_awarded: balanceAttributes.balance || totalBounties || 0,
+        total_count: reports.filter((r: any) => r.attributes?.bounty_awarded_at).length || 0
       },
       reports: {
         total_count: reports.length || 0,
