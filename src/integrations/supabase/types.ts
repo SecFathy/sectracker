@@ -487,6 +487,7 @@ export type Database = {
       }
       user_platform_profiles: {
         Row: {
+          api_credentials: Json | null
           bugs_accepted: number | null
           bugs_submitted: number | null
           created_at: string | null
@@ -501,6 +502,7 @@ export type Database = {
           username: string
         }
         Insert: {
+          api_credentials?: Json | null
           bugs_accepted?: number | null
           bugs_submitted?: number | null
           created_at?: string | null
@@ -515,6 +517,7 @@ export type Database = {
           username: string
         }
         Update: {
+          api_credentials?: Json | null
           bugs_accepted?: number | null
           bugs_submitted?: number | null
           created_at?: string | null

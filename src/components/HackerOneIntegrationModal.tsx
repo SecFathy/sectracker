@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -74,7 +75,10 @@ export function HackerOneIntegrationModal({ isOpen, onClose, platformId, onSucce
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-md">
         <DialogHeader>
-          <DialogTitle>HackerOne Integration</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <img src="/hackerone-favicon.ico" alt="HackerOne" className="w-6 h-6" />
+            HackerOne Integration
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -102,13 +106,25 @@ export function HackerOneIntegrationModal({ isOpen, onClose, platformId, onSucce
             />
           </div>
 
-          <div className="text-sm text-gray-400">
-            <p>To get your API token:</p>
-            <ol className="list-decimal list-inside mt-1 space-y-1">
-              <li>Go to HackerOne Settings → API Tokens</li>
-              <li>Create a new API token with read permissions</li>
-              <li>Copy the token and paste it here</li>
+          <div className="text-sm text-gray-400 space-y-2">
+            <p className="font-medium">To get your API token:</p>
+            <ol className="list-decimal list-inside space-y-1 text-xs">
+              <li>Go to your HackerOne Settings</li>
+              <li>Navigate to "API Tokens" section</li>
+              <li>Click "Create API Token"</li>
+              <li>Give it a name and select appropriate permissions</li>
+              <li>Copy the generated token and paste it here</li>
             </ol>
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              onClick={() => window.open('https://hackerone.com/settings/api_tokens', '_blank')}
+              className="text-blue-400 hover:text-blue-300 p-0 h-auto"
+            >
+              <ExternalLink className="w-3 h-3 mr-1" />
+              Open HackerOne API Tokens Page
+            </Button>
           </div>
 
           <div className="flex space-x-2">

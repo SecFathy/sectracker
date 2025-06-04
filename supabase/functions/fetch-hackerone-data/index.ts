@@ -42,53 +42,90 @@ serve(async (req) => {
     // Create Basic Auth header
     const authHeader = btoa(`${username}:${apiToken}`)
 
-    // Fetch user data from HackerOne API
-    const userResponse = await fetch(`https://api.hackerone.com/v1/users/${username}`, {
+    console.log('Fetching HackerOne data for user:', username)
+
+    // Fetch hacker profile data
+    const hackerResponse = await fetch(`https://api.hackerone.com/v1/hackers/${username}`, {
       headers: {
         'Authorization': `Basic ${authHeader}`,
         'Accept': 'application/json'
       }
     })
 
-    if (!userResponse.ok) {
-      throw new Error('Failed to fetch user data from HackerOne')
+    if (!hackerResponse.ok) {
+      console.error('Failed to fetch hacker profile:', hackerResponse.status, hackerResponse.statusText)
+      throw new Error(`Failed to fetch hacker profile: ${hackerResponse.status}`)
     }
 
-    const userData = await userResponse.json()
+    const hackerData = await hackerResponse.json()
+    console.log('Hacker data received:', hackerData)
+
+    // Fetch balance data
+    const balanceResponse = await fetch('https://api.hackerone.com/v1/hackers/payments/balance', {
+      headers: {
+        'Authorization': `Basic ${authHeader}`,
+        'Accept': 'application/json'
+      }
+    })
+
+    let balanceData = { data: { attributes: { balance: 0 } } }
+    if (balanceResponse.ok) {
+      balanceData = await balanceResponse.json()
+      console.log('Balance data received:', balanceData)
+    } else {
+      console.warn('Failed to fetch balance data:', balanceResponse.status)
+    }
 
     // Fetch reports data
-    const reportsResponse = await fetch(`https://api.hackerone.com/v1/reports?filter[reporter][]=${username}`, {
+    const reportsResponse = await fetch(`https://api.hackerone.com/v1/hackers/${username}/reports`, {
       headers: {
         'Authorization': `Basic ${authHeader}`,
         'Accept': 'application/json'
       }
     })
 
-    const reportsData = reportsResponse.ok ? await reportsResponse.json() : { data: [] }
+    let reportsData = { data: [] }
+    if (reportsResponse.ok) {
+      reportsData = await reportsResponse.json()
+      console.log('Reports data received:', reportsData)
+    } else {
+      console.warn('Failed to fetch reports data:', reportsResponse.status)
+    }
 
-    // Process and structure the data
+    // Process and structure the data according to HackerOne API response format
+    const hackerAttributes = hackerData.data?.attributes || {}
+    const balanceAttributes = balanceData.data?.attributes || {}
+    const reports = reportsData.data || []
+
+    // Calculate report statistics
+    const resolvedReports = reports.filter((r: any) => r.attributes?.state === 'resolved')
+    const duplicateReports = reports.filter((r: any) => r.attributes?.state === 'duplicate')
+    const notApplicableReports = reports.filter((r: any) => r.attributes?.state === 'not-applicable')
+
     const structuredData = {
       user_info: {
-        username: userData.data?.attributes?.username || username,
-        reputation: userData.data?.attributes?.reputation || 0,
-        signal: userData.data?.attributes?.signal || 0,
-        impact: userData.data?.attributes?.impact || 0
+        username: hackerAttributes.username || username,
+        reputation: hackerAttributes.reputation || 0,
+        signal: hackerAttributes.signal || 0,
+        impact: hackerAttributes.impact || 0
       },
       bounties: {
-        total_awarded: userData.data?.attributes?.total_bounty_amount || 0,
-        total_count: userData.data?.attributes?.bounty_count || 0
+        total_awarded: balanceAttributes.balance || 0,
+        total_count: resolvedReports.length || 0
       },
       reports: {
-        total_count: reportsData.data?.length || 0,
-        resolved_count: reportsData.data?.filter((r: any) => r.attributes?.state === 'resolved').length || 0,
-        duplicate_count: reportsData.data?.filter((r: any) => r.attributes?.state === 'duplicate').length || 0,
-        not_applicable_count: reportsData.data?.filter((r: any) => r.attributes?.state === 'not-applicable').length || 0
+        total_count: reports.length || 0,
+        resolved_count: resolvedReports.length || 0,
+        duplicate_count: duplicateReports.length || 0,
+        not_applicable_count: notApplicableReports.length || 0
       },
       programs: {
-        invited_count: userData.data?.attributes?.invited_bug_bounty_program_count || 0,
-        participating_count: userData.data?.attributes?.participating_bug_bounty_program_count || 0
+        invited_count: hackerAttributes.invited_programs_count || 0,
+        participating_count: hackerAttributes.participating_programs_count || 0
       }
     }
+
+    console.log('Structured data:', structuredData)
 
     return new Response(
       JSON.stringify(structuredData),
