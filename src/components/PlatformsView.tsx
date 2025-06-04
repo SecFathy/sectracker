@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, Bug, Target, User } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { PlatformModal } from '@/components/PlatformModal';
 import { PlatformProfileModal } from '@/components/PlatformProfileModal';
 import { ProgramModal } from '@/components/ProgramModal';
 import { BugReportModal } from '@/components/BugReportModal';
@@ -13,6 +13,7 @@ import { PlatformProfileCard } from '@/components/PlatformProfileCard';
 import { BugFilters } from '@/components/BugFilters';
 import { BugReportCard } from '@/components/BugReportCard';
 import { Database } from '@/integrations/supabase/types';
+import { useToast } from '@/hooks/use-toast';
 
 interface Platform {
   id: string;
@@ -68,6 +69,7 @@ export function PlatformsView() {
   const [userProfiles, setUserProfiles] = useState<UserPlatformProfile[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [bugs, setBugs] = useState<Bug[]>([]);
+  const [showPlatformModal, setShowPlatformModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showProgramModal, setShowProgramModal] = useState(false);
   const [showBugModal, setShowBugModal] = useState(false);
@@ -83,6 +85,7 @@ export function PlatformsView() {
     vulnerabilityType: '',
     search: ''
   });
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchData();
@@ -130,6 +133,35 @@ export function PlatformsView() {
     setBugs(bugsData || []);
   };
 
+  const handleSavePlatform = async (platform: { id: string; name: string; url: string }) => {
+    try {
+      const { error } = await supabase
+        .from('platforms')
+        .insert({
+          name: platform.name,
+          url: platform.url,
+          platform_type: 'bug_bounty',
+          description: `Custom platform: ${platform.name}`
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Platform added successfully!",
+      });
+
+      fetchData();
+      setShowPlatformModal(false);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const filteredBugs = bugs.filter(bug => {
     const matchesSeverity = bugFilters.severity === 'all' || bug.severity === bugFilters.severity;
     const matchesStatus = bugFilters.status === 'all' || bug.status === bugFilters.status;
@@ -158,6 +190,13 @@ export function PlatformsView() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-white">Platforms & Bug Reports</h1>
         <div className="flex space-x-2">
+          <Button 
+            onClick={() => setShowPlatformModal(true)}
+            className="bg-purple-600 hover:bg-purple-700"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Platform
+          </Button>
           <Button 
             onClick={() => setShowProfileModal(true)}
             className="bg-cyan-600 hover:bg-cyan-700"
@@ -213,6 +252,12 @@ export function PlatformsView() {
           </div>
         </CardContent>
       </Card>
+
+      <PlatformModal 
+        isOpen={showPlatformModal} 
+        onClose={() => setShowPlatformModal(false)}
+        onSave={handleSavePlatform}
+      />
 
       <PlatformProfileModal 
         isOpen={showProfileModal} 
