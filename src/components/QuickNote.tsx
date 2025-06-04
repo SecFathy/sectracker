@@ -25,7 +25,7 @@ export function QuickNote() {
       .select('*')
       .eq('user_id', user.data.user.id)
       .eq('title', 'Quick Note')
-      .single();
+      .maybeSingle();
 
     if (data) {
       setContent(data.content || '');
@@ -44,7 +44,7 @@ export function QuickNote() {
       .select('*')
       .eq('user_id', user.data.user.id)
       .eq('title', 'Quick Note')
-      .single();
+      .maybeSingle();
 
     let error;
     if (existingNote) {

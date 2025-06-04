@@ -19,6 +19,7 @@ serve(async (req) => {
     )
 
     const { user_id, platform_id } = await req.json()
+    console.log('Fetching HackerOne data for user:', user_id, 'platform:', platform_id)
 
     // Get user credentials
     const { data: profile, error: profileError } = await supabaseClient
@@ -28,74 +29,101 @@ serve(async (req) => {
       .eq('platform_id', platform_id)
       .single()
 
-    if (profileError || !profile) {
-      throw new Error('HackerOne credentials not found')
+    if (profileError) {
+      console.error('Profile fetch error:', profileError)
+      throw new Error(`Profile fetch failed: ${profileError.message}`)
+    }
+
+    if (!profile) {
+      throw new Error('HackerOne profile not found')
     }
 
     const { username, api_credentials } = profile
-    const apiToken = api_credentials?.api_token
+    console.log('Found profile for username:', username)
 
-    if (!apiToken) {
-      throw new Error('API token not found')
+    if (!api_credentials?.api_token) {
+      throw new Error('API token not found in credentials')
     }
+
+    const apiToken = api_credentials.api_token
 
     // Create Basic Auth header
     const authHeader = btoa(`${username}:${apiToken}`)
+    console.log('Created auth header for username:', username)
 
-    console.log('Fetching HackerOne data for user:', username)
-
-    // Fetch hacker profile data
-    const hackerResponse = await fetch(`https://api.hackerone.com/v1/hackers/${username}`, {
+    // Test API connection first with a simple request
+    console.log('Testing API connection...')
+    const testResponse = await fetch(`https://api.hackerone.com/v1/hackers/${username}`, {
       headers: {
         'Authorization': `Basic ${authHeader}`,
         'Accept': 'application/json'
       }
     })
 
-    if (!hackerResponse.ok) {
-      console.error('Failed to fetch hacker profile:', hackerResponse.status, hackerResponse.statusText)
-      throw new Error(`Failed to fetch hacker profile: ${hackerResponse.status}`)
+    if (!testResponse.ok) {
+      const errorText = await testResponse.text()
+      console.error('API test failed:', testResponse.status, testResponse.statusText, errorText)
+      
+      if (testResponse.status === 401) {
+        throw new Error('Invalid HackerOne credentials. Please check your username and API token.')
+      } else if (testResponse.status === 404) {
+        throw new Error('HackerOne profile not found. Please check your username.')
+      } else {
+        throw new Error(`HackerOne API error: ${testResponse.status} ${testResponse.statusText}`)
+      }
     }
 
-    const hackerData = await hackerResponse.json()
-    console.log('Hacker data received:', hackerData)
+    const hackerData = await testResponse.json()
+    console.log('Successfully fetched hacker profile')
 
-    // Fetch balance data
-    const balanceResponse = await fetch('https://api.hackerone.com/v1/hackers/payments/balance', {
-      headers: {
-        'Authorization': `Basic ${authHeader}`,
-        'Accept': 'application/json'
-      }
-    })
-
+    // Fetch balance data (optional - don't fail if this doesn't work)
     let balanceData = { data: { attributes: { balance: 0 } } }
-    if (balanceResponse.ok) {
-      balanceData = await balanceResponse.json()
-      console.log('Balance data received:', balanceData)
-    } else {
-      console.warn('Failed to fetch balance data:', balanceResponse.status)
+    try {
+      console.log('Fetching balance data...')
+      const balanceResponse = await fetch('https://api.hackerone.com/v1/hackers/payments/balance', {
+        headers: {
+          'Authorization': `Basic ${authHeader}`,
+          'Accept': 'application/json'
+        }
+      })
+
+      if (balanceResponse.ok) {
+        balanceData = await balanceResponse.json()
+        console.log('Successfully fetched balance data')
+      } else {
+        console.warn('Balance fetch failed:', balanceResponse.status)
+      }
+    } catch (error) {
+      console.warn('Balance fetch error:', error)
     }
 
-    // Fetch reports data
-    const reportsResponse = await fetch(`https://api.hackerone.com/v1/hackers/${username}/reports`, {
-      headers: {
-        'Authorization': `Basic ${authHeader}`,
-        'Accept': 'application/json'
-      }
-    })
-
+    // Fetch reports data (optional - don't fail if this doesn't work)
     let reportsData = { data: [] }
-    if (reportsResponse.ok) {
-      reportsData = await reportsResponse.json()
-      console.log('Reports data received:', reportsData)
-    } else {
-      console.warn('Failed to fetch reports data:', reportsResponse.status)
+    try {
+      console.log('Fetching reports data...')
+      const reportsResponse = await fetch(`https://api.hackerone.com/v1/hackers/${username}/reports`, {
+        headers: {
+          'Authorization': `Basic ${authHeader}`,
+          'Accept': 'application/json'
+        }
+      })
+
+      if (reportsResponse.ok) {
+        reportsData = await reportsResponse.json()
+        console.log('Successfully fetched reports data')
+      } else {
+        console.warn('Reports fetch failed:', reportsResponse.status)
+      }
+    } catch (error) {
+      console.warn('Reports fetch error:', error)
     }
 
     // Process and structure the data according to HackerOne API response format
     const hackerAttributes = hackerData.data?.attributes || {}
     const balanceAttributes = balanceData.data?.attributes || {}
     const reports = reportsData.data || []
+
+    console.log('Processing data for user:', hackerAttributes.username || username)
 
     // Calculate report statistics
     const resolvedReports = reports.filter((r: any) => r.attributes?.state === 'resolved')
@@ -125,7 +153,7 @@ serve(async (req) => {
       }
     }
 
-    console.log('Structured data:', structuredData)
+    console.log('Returning structured data:', structuredData)
 
     return new Response(
       JSON.stringify(structuredData),
