@@ -47,12 +47,16 @@ serve(async (req) => {
 
     const apiToken = api_credentials.api_token
 
-    // Create Basic Auth header using the exact method from your example
-    let headers = new Headers();
-    headers.set('Authorization', 'Basic ' + btoa(username + ":" + apiToken));
-    headers.set('Accept', 'application/json');
+    // Create Basic Auth header exactly like your working curl command
+    const basicAuth = btoa(`${username}:${apiToken}`)
+    
+    const headers = {
+      'Authorization': `Basic ${basicAuth}`,
+      'Accept': 'application/json'
+    }
 
     console.log('Testing authentication with username:', username)
+    console.log('Using API token (first 10 chars):', apiToken.substring(0, 10) + '...')
 
     // Test API connection first with the user profile endpoint
     console.log('Testing API connection...')
@@ -92,7 +96,7 @@ serve(async (req) => {
 
       if (balanceResponse.ok) {
         balanceData = await balanceResponse.json()
-        console.log('Successfully fetched balance data')
+        console.log('Successfully fetched balance data:', balanceData)
       } else {
         const balanceError = await balanceResponse.text()
         console.warn('Balance fetch failed:', balanceResponse.status, balanceError)
@@ -123,7 +127,7 @@ serve(async (req) => {
 
     // Process and structure the data according to HackerOne API response format
     const hackerAttributes = hackerData.data?.attributes || {}
-    const balanceAttributes = balanceData.data?.attributes || {}
+    const balanceAttributes = balanceData.data || {}
     const reports = reportsData.data || []
 
     console.log('Processing data for user:', hackerAttributes.username || username)
@@ -136,6 +140,9 @@ serve(async (req) => {
       .filter((r: any) => r.attributes?.bounty_awarded_at)
       .reduce((sum: number, r: any) => sum + (r.attributes?.bounty_amount || 0), 0)
 
+    // Use balance from API response if available, otherwise calculate from reports
+    const totalAwarded = balanceAttributes.balance || totalBounties || 0
+
     const structuredData = {
       user_info: {
         username: hackerAttributes.username || username,
@@ -144,7 +151,7 @@ serve(async (req) => {
         impact: hackerAttributes.impact || 0
       },
       bounties: {
-        total_awarded: balanceAttributes.balance || totalBounties || 0,
+        total_awarded: totalAwarded,
         total_count: reports.filter((r: any) => r.attributes?.bounty_awarded_at).length || 0
       },
       reports: {
