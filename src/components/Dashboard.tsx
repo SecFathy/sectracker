@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Bug, Shield, CheckSquare, Lightbulb, Target, Trophy } from 'lucide-react';
@@ -81,11 +82,12 @@ export function Dashboard() {
         setUserName(displayName);
       }
 
-      // Fetch user's platform profiles count
+      // Fetch total platforms count (all platforms in the system)
       const { count: platformsCount } = await supabase
-        .from('user_platform_profiles')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId);
+        .from('platforms')
+        .select('*', { count: 'exact', head: true });
+
+      console.log('Total platforms count:', platformsCount);
 
       // Fetch user's bugs count, total bounties, and severity distribution
       const { data: bugs } = await supabase
@@ -145,9 +147,9 @@ export function Dashboard() {
   const dashboardCards: DashboardCard[] = [
     {
       id: 'platforms',
-      title: 'Platform Profiles',
+      title: 'Total Platforms',
       value: stats.totalPlatforms,
-      description: 'Active platform profiles',
+      description: 'Available bug bounty platforms',
       icon: Target,
       color: 'text-cyan-400'
     },
