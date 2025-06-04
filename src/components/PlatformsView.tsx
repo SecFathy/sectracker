@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -66,6 +67,103 @@ export function PlatformsView() {
   const [selectedPlatformId, setSelectedPlatformId] = useState<string>('');
   const { toast } = useToast();
 
+  const fetchData = async () => {
+    try {
+      // Fetch platforms
+      const { data: platformsData, error: platformsError } = await supabase
+        .from('platforms')
+        .select('*')
+        .order('name');
+
+      if (platformsError) throw platformsError;
+
+      // Fetch user profiles with platform info
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('user_platform_profiles')
+        .select(`
+          id,
+          platform_id,
+          username,
+          profile_url,
+          reputation_points,
+          rank_position,
+          total_bounties_earned,
+          bugs_submitted,
+          bugs_accepted,
+          platforms (
+            name,
+            url,
+            favicon_url
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (profilesError) throw profilesError;
+
+      // Fetch bug reports
+      const { data: bugReportsData, error: bugReportsError } = await supabase
+        .from('bug_reports')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (bugReportsError) throw bugReportsError;
+
+      setPlatforms(platformsData || []);
+      setProfiles(profilesData || []);
+      setBugReports(bugReportsData || []);
+
+      // Calculate stats
+      const enabledPlatforms = platformsData?.filter(p => p.is_enabled).length || 0;
+      setStats({
+        totalPlatforms: platformsData?.length || 0,
+        enabledPlatforms,
+        totalProfiles: profilesData?.length || 0,
+        totalBugReports: bugReportsData?.length || 0
+      });
+
+    } catch (error: any) {
+      console.error('Error fetching data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load platform data",
+        variant: "destructive",
+      });
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleEditPlatform = (platform: Platform) => {
+    setSelectedPlatform(platform);
+    setIsEditModalOpen(true);
+  };
+
+  const handleDeletePlatform = async (platformId: string) => {
+    try {
+      const { error } = await supabase
+        .from('platforms')
+        .delete()
+        .eq('id', platformId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Platform deleted successfully!",
+      });
+
+      fetchData();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleHackerOneIntegration = (platformId: string) => {
     setSelectedPlatformId(platformId);
     setIsHackerOneModalOpen(true);
@@ -78,6 +176,34 @@ export function PlatformsView() {
 
   return (
     <div className="space-y-6">
+      {/* Overview Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="bg-gray-800 border-gray-700 text-white">
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-blue-400">{stats.totalPlatforms}</div>
+            <div className="text-sm text-gray-400">Total Platforms</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gray-800 border-gray-700 text-white">
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-green-400">{stats.enabledPlatforms}</div>
+            <div className="text-sm text-gray-400">Enabled Platforms</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gray-800 border-gray-700 text-white">
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-purple-400">{stats.totalProfiles}</div>
+            <div className="text-sm text-gray-400">Your Profiles</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gray-800 border-gray-700 text-white">
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-orange-400">{stats.totalBugReports}</div>
+            <div className="text-sm text-gray-400">Bug Reports</div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Your Platform Profiles */}
       <Card className="bg-gray-800 border-gray-700 text-white">
         <CardHeader>
@@ -181,6 +307,98 @@ export function PlatformsView() {
               ))}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* All Platforms Management */}
+      <Card className="bg-gray-800 border-gray-700 text-white">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="w-5 h-5" />
+                All Platforms Management
+              </CardTitle>
+              <CardDescription>Manage available platforms and their settings</CardDescription>
+            </div>
+            <Button 
+              onClick={() => setIsAddModalOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Platform
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {platforms.map((platform) => (
+              <Card key={platform.id} className="bg-gray-700 border-gray-600">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      {platform.favicon_url && (
+                        <img 
+                          src={platform.favicon_url} 
+                          alt="" 
+                          className="w-5 h-5"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                          }}
+                        />
+                      )}
+                      {platform.name}
+                    </CardTitle>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditPlatform(platform)}
+                        className="border-gray-600 text-gray-300 hover:bg-gray-600"
+                      >
+                        <Edit className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeletePlatform(platform.id)}
+                        className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={platform.is_enabled ? "default" : "secondary"}>
+                      {platform.is_enabled ? 'Enabled' : 'Disabled'}
+                    </Badge>
+                    <Badge variant="outline" className="border-gray-500">
+                      {platform.category}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="text-sm text-gray-400">
+                    {platform.description}
+                  </div>
+                  <div className="flex items-center justify-between pt-2">
+                    <div className="text-sm text-gray-400">
+                      Type: {platform.platform_type}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(platform.url, '_blank')}
+                      className="border-gray-600"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </CardContent>
       </Card>
 
