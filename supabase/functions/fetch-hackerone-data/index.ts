@@ -47,29 +47,35 @@ serve(async (req) => {
 
     const apiToken = api_credentials.api_token
 
-    // Create Basic Auth header exactly like your working curl command
-    const basicAuth = btoa(`${username}:${apiToken}`)
+    // Create Basic Auth header exactly like the working curl command
+    // curl uses -u "username:token" which is equivalent to Basic base64(username:token)
+    const authString = `${username}:${apiToken}`
+    const basicAuth = btoa(authString)
     
     const headers = {
       'Authorization': `Basic ${basicAuth}`,
-      'Accept': 'application/json'
+      'Accept': 'application/json',
+      'User-Agent': 'HackerOne-API-Client/1.0'
     }
 
-    console.log('Testing authentication with username:', username)
-    console.log('Using API token (first 10 chars):', apiToken.substring(0, 10) + '...')
+    console.log('Using credentials - Username:', username)
+    console.log('Auth string length:', authString.length)
+    console.log('Basic auth header created successfully')
 
     // Test API connection first with the user profile endpoint
-    console.log('Testing API connection...')
+    console.log('Testing API connection with profile endpoint...')
     const testResponse = await fetch(`https://api.hackerone.com/v1/hackers/${username}`, {
       method: 'GET',
       headers: headers
     })
 
     console.log('API response status:', testResponse.status)
+    console.log('API response headers:', Object.fromEntries(testResponse.headers.entries()))
     
     if (!testResponse.ok) {
       const errorText = await testResponse.text()
-      console.error('API test failed:', testResponse.status, testResponse.statusText, errorText)
+      console.error('API test failed:', testResponse.status, testResponse.statusText)
+      console.error('Error response body:', errorText)
       
       if (testResponse.status === 401) {
         throw new Error('Invalid HackerOne credentials. Please check your username and API token.')
@@ -86,7 +92,7 @@ serve(async (req) => {
     console.log('Successfully fetched hacker profile')
 
     // Fetch balance data
-    let balanceData = { data: { attributes: { balance: 0 } } }
+    let balanceData = { data: { balance: 0 } }
     try {
       console.log('Fetching balance data...')
       const balanceResponse = await fetch('https://api.hackerone.com/v1/hackers/payments/balance', {
