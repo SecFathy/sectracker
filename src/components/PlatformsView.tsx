@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Bug, Target, User, ExternalLink, Users } from 'lucide-react';
+import { Plus, Bug, Target, User, ExternalLink, Users, Edit, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { PlatformModal } from '@/components/PlatformModal';
+import { EditPlatformModal } from '@/components/EditPlatformModal';
 import { PlatformProfileModal } from '@/components/PlatformProfileModal';
 import { ProgramModal } from '@/components/ProgramModal';
 import { BugReportModal } from '@/components/BugReportModal';
@@ -22,6 +23,9 @@ interface Platform {
   url: string;
   platform_type: string;
   description: string;
+  favicon_url?: string;
+  is_enabled?: boolean;
+  category?: string;
 }
 
 interface UserPlatformProfile {
@@ -76,6 +80,7 @@ export function PlatformsView() {
   const [showBugModal, setShowBugModal] = useState(false);
   const [showBugDetails, setShowBugDetails] = useState(false);
   const [showBugActions, setShowBugActions] = useState(false);
+  const [showEditPlatformModal, setShowEditPlatformModal] = useState(false);
   const [selectedPlatform, setSelectedPlatform] = useState<string>('');
   const [selectedBug, setSelectedBug] = useState<Bug | null>(null);
   const [selectedBugForAction, setSelectedBugForAction] = useState<Bug | null>(null);
@@ -86,6 +91,7 @@ export function PlatformsView() {
     vulnerabilityType: '',
     search: ''
   });
+  const [selectedPlatformForEdit, setSelectedPlatformForEdit] = useState<Platform | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -163,6 +169,35 @@ export function PlatformsView() {
     }
   };
 
+  const handleEditPlatform = (platform: Platform) => {
+    setSelectedPlatformForEdit(platform);
+    setShowEditPlatformModal(true);
+  };
+
+  const handleTogglePlatform = async (platform: Platform) => {
+    try {
+      const { error } = await supabase
+        .from('platforms')
+        .update({ is_enabled: !platform.is_enabled })
+        .eq('id', platform.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `Platform ${!platform.is_enabled ? 'enabled' : 'disabled'} successfully!`,
+      });
+
+      fetchData();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const filteredBugs = bugs.filter(bug => {
     const matchesSeverity = bugFilters.severity === 'all' || bug.severity === bugFilters.severity;
     const matchesStatus = bugFilters.status === 'all' || bug.status === bugFilters.status;
@@ -186,12 +221,14 @@ export function PlatformsView() {
     setShowBugActions(true);
   };
 
-  // Separate platforms into those with profiles and those without
-  const platformsWithProfiles = platforms.filter(platform => 
+  // Filter platforms by enabled status and separate into those with profiles and those without
+  const enabledPlatforms = platforms.filter(platform => platform.is_enabled !== false);
+  
+  const platformsWithProfiles = enabledPlatforms.filter(platform => 
     userProfiles.some(profile => profile.platform_id === platform.id)
   );
   
-  const platformsWithoutProfiles = platforms.filter(platform => 
+  const platformsWithoutProfiles = enabledPlatforms.filter(platform => 
     !userProfiles.some(profile => profile.platform_id === platform.id)
   );
 
@@ -342,12 +379,35 @@ export function PlatformsView() {
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-white flex items-center space-x-2">
-                      <Target className="h-5 w-5 text-gray-400" />
+                      {platform.favicon_url ? (
+                        <img 
+                          src={platform.favicon_url} 
+                          alt={`${platform.name} favicon`}
+                          className="h-5 w-5"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <Target className="h-5 w-5 text-gray-400" />
+                      )}
                       <span className="text-lg">{platform.name}</span>
                     </CardTitle>
-                    <Badge className="bg-gray-700 text-gray-300 text-xs">
-                      {platform.platform_type}
-                    </Badge>
+                    <div className="flex items-center space-x-2">
+                      {platform.category && (
+                        <Badge className="bg-gray-700 text-gray-300 text-xs">
+                          {platform.category}
+                        </Badge>
+                      )}
+                      <Button
+                        onClick={() => handleEditPlatform(platform)}
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 w-6 p-0 text-gray-400 hover:text-white"
+                      >
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="pt-0">
@@ -380,6 +440,89 @@ export function PlatformsView() {
           </div>
         </div>
       )}
+
+      {/* All Platforms Management */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-white">All Platforms Management</h2>
+          <Badge variant="outline" className="border-gray-600 text-gray-300">
+            {platforms.length} Total
+          </Badge>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {platforms.map((platform) => (
+            <Card key={platform.id} className={`bg-gray-800 border-gray-700 hover:border-gray-600 transition-colors ${!platform.is_enabled ? 'opacity-60' : ''}`}>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-white flex items-center space-x-2">
+                    {platform.favicon_url ? (
+                      <img 
+                        src={platform.favicon_url} 
+                        alt={`${platform.name} favicon`}
+                        className="h-5 w-5"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <Target className="h-5 w-5 text-gray-400" />
+                    )}
+                    <span className="text-lg">{platform.name}</span>
+                  </CardTitle>
+                  <div className="flex items-center space-x-2">
+                    {platform.category && (
+                      <Badge className="bg-gray-700 text-gray-300 text-xs">
+                        {platform.category}
+                      </Badge>
+                    )}
+                    <Button
+                      onClick={() => handleTogglePlatform(platform)}
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 w-6 p-0 text-gray-400 hover:text-white"
+                    >
+                      {platform.is_enabled !== false ? (
+                        <Eye className="h-3 w-3" />
+                      ) : (
+                        <EyeOff className="h-3 w-3" />
+                      )}
+                    </Button>
+                    <Button
+                      onClick={() => handleEditPlatform(platform)}
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 w-6 p-0 text-gray-400 hover:text-white"
+                    >
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <p className="text-gray-400 text-sm mb-4 line-clamp-2">
+                  {platform.description || 'Bug bounty platform'}
+                </p>
+                <div className="flex items-center justify-between">
+                  <Badge variant={platform.is_enabled !== false ? "default" : "secondary"}>
+                    {platform.is_enabled !== false ? "Enabled" : "Disabled"}
+                  </Badge>
+                  {platform.url && (
+                    <Button 
+                      onClick={() => window.open(platform.url, '_blank')}
+                      size="sm"
+                      variant="outline"
+                      className="border-gray-600 text-gray-300 hover:bg-gray-700"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
 
       {/* Recent Bugs with Filters */}
       <Card className="bg-gray-800 border-gray-700">
@@ -433,7 +576,14 @@ export function PlatformsView() {
       <PlatformModal 
         isOpen={showPlatformModal} 
         onClose={() => setShowPlatformModal(false)}
-        onSave={handleSavePlatform}
+        onSave={fetchData}
+      />
+
+      <EditPlatformModal
+        isOpen={showEditPlatformModal}
+        onClose={() => setShowEditPlatformModal(false)}
+        platform={selectedPlatformForEdit}
+        onSave={fetchData}
       />
 
       <PlatformProfileModal 
