@@ -42,6 +42,27 @@ export function PlatformProfileModal({ isOpen, onClose, platforms, onSave }: Pla
       const user = await supabase.auth.getUser();
       if (!user.data.user) throw new Error('Not authenticated');
 
+      // Check if a profile already exists for this user and platform
+      const { data: existingProfile, error: checkError } = await supabase
+        .from('user_platform_profiles')
+        .select('id')
+        .eq('user_id', user.data.user.id)
+        .eq('platform_id', formData.platform_id)
+        .maybeSingle();
+
+      if (checkError) throw checkError;
+
+      if (existingProfile) {
+        toast({
+          title: "Profile Already Exists",
+          description: "You already have a profile for this platform. Please use the HackerOne integration button to update your data.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Create new profile if none exists
       const { error } = await supabase
         .from('user_platform_profiles')
         .insert({
