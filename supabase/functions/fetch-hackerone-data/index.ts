@@ -47,20 +47,18 @@ serve(async (req) => {
 
     const apiToken = api_credentials.api_token
 
-    // Create Basic Auth header - ensure proper encoding
-    const credentials = `${username}:${apiToken}`
-    const authHeader = btoa(credentials)
+    // Create Basic Auth header using the exact method from your example
+    let headers = new Headers();
+    headers.set('Authorization', 'Basic ' + btoa(username + ":" + apiToken));
+    headers.set('Accept', 'application/json');
+
     console.log('Testing authentication with username:', username)
 
     // Test API connection first with the user profile endpoint
     console.log('Testing API connection...')
     const testResponse = await fetch(`https://api.hackerone.com/v1/hackers/${username}`, {
       method: 'GET',
-      headers: {
-        'Authorization': `Basic ${authHeader}`,
-        'Accept': 'application/json',
-        'User-Agent': 'HackerOne-Dashboard/1.0'
-      }
+      headers: headers
     })
 
     console.log('API response status:', testResponse.status)
@@ -89,11 +87,7 @@ serve(async (req) => {
       console.log('Fetching balance data...')
       const balanceResponse = await fetch('https://api.hackerone.com/v1/hackers/payments/balance', {
         method: 'GET',
-        headers: {
-          'Authorization': `Basic ${authHeader}`,
-          'Accept': 'application/json',
-          'User-Agent': 'HackerOne-Dashboard/1.0'
-        }
+        headers: headers
       })
 
       if (balanceResponse.ok) {
@@ -113,11 +107,7 @@ serve(async (req) => {
       console.log('Fetching reports data...')
       const reportsResponse = await fetch(`https://api.hackerone.com/v1/hackers/${username}/reports`, {
         method: 'GET',
-        headers: {
-          'Authorization': `Basic ${authHeader}`,
-          'Accept': 'application/json',
-          'User-Agent': 'HackerOne-Dashboard/1.0'
-        }
+        headers: headers
       })
 
       if (reportsResponse.ok) {
