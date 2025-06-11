@@ -1,16 +1,14 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, ExternalLink, Settings, Users, Activity } from 'lucide-react';
+import { Plus, Edit, Trash2, ExternalLink, Settings, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { PlatformModal } from './PlatformModal';
 import { EditPlatformModal } from './EditPlatformModal';
 import { PlatformProfileModal } from './PlatformProfileModal';
-import { HackerOneIntegrationModal } from './HackerOneIntegrationModal';
-import { HackerOneDataCard } from './HackerOneDataCard';
+import { ThemeToggle } from './ThemeToggle';
 
 interface Platform {
   id: string;
@@ -61,7 +59,6 @@ export function PlatformsView() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [isHackerOneModalOpen, setIsHackerOneModalOpen] = useState(false);
   const [selectedPlatform, setSelectedPlatform] = useState<Platform | null>(null);
   const [selectedPlatformId, setSelectedPlatformId] = useState<string>('');
   const { toast } = useToast();
@@ -163,48 +160,43 @@ export function PlatformsView() {
     }
   };
 
-  const handleHackerOneIntegration = (platformId: string) => {
-    setSelectedPlatformId(platformId);
-    setIsHackerOneModalOpen(true);
-  };
-
-  const isHackerOnePlatform = (platform: Platform) => {
-    return platform.name.toLowerCase().includes('hackerone') || 
-           platform.url.toLowerCase().includes('hackerone.com');
-  };
-
   return (
     <div className="space-y-6">
+      {/* Theme Toggle */}
+      <div className="flex justify-end">
+        <ThemeToggle />
+      </div>
+
       {/* Overview Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-gray-800 border-gray-700 text-white">
+        <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold text-blue-400">{stats.totalPlatforms}</div>
-            <div className="text-sm text-gray-400">Total Platforms</div>
+            <div className="text-sm text-muted-foreground">Total Platforms</div>
           </CardContent>
         </Card>
-        <Card className="bg-gray-800 border-gray-700 text-white">
+        <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold text-green-400">{stats.enabledPlatforms}</div>
-            <div className="text-sm text-gray-400">Enabled Platforms</div>
+            <div className="text-sm text-muted-foreground">Enabled Platforms</div>
           </CardContent>
         </Card>
-        <Card className="bg-gray-800 border-gray-700 text-white">
+        <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold text-purple-400">{stats.totalProfiles}</div>
-            <div className="text-sm text-gray-400">Your Profiles</div>
+            <div className="text-sm text-muted-foreground">Your Profiles</div>
           </CardContent>
         </Card>
-        <Card className="bg-gray-800 border-gray-700 text-white">
+        <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold text-orange-400">{stats.totalBugs}</div>
-            <div className="text-sm text-gray-400">Bug Reports</div>
+            <div className="text-sm text-muted-foreground">Bug Reports</div>
           </CardContent>
         </Card>
       </div>
 
       {/* Your Platform Profiles */}
-      <Card className="bg-gray-800 border-gray-700 text-white">
+      <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -216,7 +208,7 @@ export function PlatformsView() {
             </div>
             <Button 
               onClick={() => setIsProfileModalOpen(true)}
-              className="bg-cyan-600 hover:bg-cyan-700"
+              className="bg-primary hover:bg-primary/90"
             >
               <Plus className="w-4 h-4 mr-2" />
               Add Profile
@@ -225,14 +217,14 @@ export function PlatformsView() {
         </CardHeader>
         <CardContent>
           {profiles.length === 0 ? (
-            <div className="text-center py-8 text-gray-400">
+            <div className="text-center py-8 text-muted-foreground">
               <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>No platform profiles yet. Add your first profile to get started!</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {profiles.map((profile) => (
-                <Card key={profile.id} className="bg-gray-700 border-gray-600">
+                <Card key={profile.id} className="border-border">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg flex items-center gap-2">
                       {profile.platforms.favicon_url && (
@@ -253,19 +245,19 @@ export function PlatformsView() {
                   <CardContent className="space-y-3">
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div>
-                        <div className="text-gray-400">Reputation</div>
+                        <div className="text-muted-foreground">Reputation</div>
                         <div className="font-semibold">{profile.reputation_points}</div>
                       </div>
                       <div>
-                        <div className="text-gray-400">Rank</div>
+                        <div className="text-muted-foreground">Rank</div>
                         <div className="font-semibold">{profile.rank_position || 'N/A'}</div>
                       </div>
                       <div>
-                        <div className="text-gray-400">Bounties</div>
+                        <div className="text-muted-foreground">Bounties</div>
                         <div className="font-semibold text-green-400">${profile.total_bounties_earned}</div>
                       </div>
                       <div>
-                        <div className="text-gray-400">Success Rate</div>
+                        <div className="text-muted-foreground">Success Rate</div>
                         <div className="font-semibold">
                           {profile.bugs_submitted > 0 
                             ? `${Math.round((profile.bugs_accepted / profile.bugs_submitted) * 100)}%`
@@ -275,7 +267,7 @@ export function PlatformsView() {
                       </div>
                     </div>
                     <div className="flex items-center justify-between pt-2">
-                      <div className="text-sm text-gray-400">
+                      <div className="text-sm text-muted-foreground">
                         {profile.bugs_accepted}/{profile.bugs_submitted} bugs accepted
                       </div>
                       {profile.profile_url && (
@@ -283,24 +275,11 @@ export function PlatformsView() {
                           variant="outline"
                           size="sm"
                           onClick={() => window.open(profile.profile_url, '_blank')}
-                          className="border-gray-600"
                         >
                           <ExternalLink className="w-3 h-3" />
                         </Button>
                       )}
                     </div>
-                    
-                    {/* HackerOne Integration Button */}
-                    {isHackerOnePlatform(platforms.find(p => p.id === profile.platform_id) || {} as Platform) && (
-                      <Button
-                        onClick={() => handleHackerOneIntegration(profile.platform_id)}
-                        className="w-full bg-green-600 hover:bg-green-700 mt-3"
-                        size="sm"
-                      >
-                        <Activity className="w-4 h-4 mr-2" />
-                        View HackerOne Data
-                      </Button>
-                    )}
                   </CardContent>
                 </Card>
               ))}
@@ -310,7 +289,7 @@ export function PlatformsView() {
       </Card>
 
       {/* All Platforms Management */}
-      <Card className="bg-gray-800 border-gray-700 text-white">
+      <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -322,7 +301,7 @@ export function PlatformsView() {
             </div>
             <Button 
               onClick={() => setIsAddModalOpen(true)}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-primary hover:bg-primary/90"
             >
               <Plus className="w-4 h-4 mr-2" />
               Add Platform
@@ -332,7 +311,7 @@ export function PlatformsView() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {platforms.map((platform) => (
-              <Card key={platform.id} className="bg-gray-700 border-gray-600">
+              <Card key={platform.id} className="border-border">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg flex items-center gap-2">
@@ -354,7 +333,6 @@ export function PlatformsView() {
                         variant="outline"
                         size="sm"
                         onClick={() => handleEditPlatform(platform)}
-                        className="border-gray-600 text-gray-300 hover:bg-gray-600"
                       >
                         <Edit className="w-3 h-3" />
                       </Button>
@@ -362,7 +340,7 @@ export function PlatformsView() {
                         variant="outline"
                         size="sm"
                         onClick={() => handleDeletePlatform(platform.id)}
-                        className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white"
+                        className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
                       >
                         <Trash2 className="w-3 h-3" />
                       </Button>
@@ -372,24 +350,23 @@ export function PlatformsView() {
                     <Badge variant={platform.is_enabled ? "default" : "secondary"}>
                       {platform.is_enabled ? 'Enabled' : 'Disabled'}
                     </Badge>
-                    <Badge variant="outline" className="border-gray-500">
+                    <Badge variant="outline">
                       {platform.category}
                     </Badge>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="text-sm text-gray-400">
+                  <div className="text-sm text-muted-foreground">
                     {platform.description}
                   </div>
                   <div className="flex items-center justify-between pt-2">
-                    <div className="text-sm text-gray-400">
+                    <div className="text-sm text-muted-foreground">
                       Type: {platform.platform_type}
                     </div>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => window.open(platform.url, '_blank')}
-                      className="border-gray-600"
                     >
                       <ExternalLink className="w-3 h-3" />
                     </Button>
@@ -400,19 +377,6 @@ export function PlatformsView() {
           </div>
         </CardContent>
       </Card>
-
-      {/* HackerOne Data Display */}
-      {selectedPlatformId && platforms.find(p => p.id === selectedPlatformId && isHackerOnePlatform(p)) && (
-        <Card className="bg-gray-800 border-gray-700 text-white">
-          <CardHeader>
-            <CardTitle>HackerOne Integration</CardTitle>
-            <CardDescription>Live data from your HackerOne account</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <HackerOneDataCard platformId={selectedPlatformId} />
-          </CardContent>
-        </Card>
-      )}
 
       {/* Modals */}
       <PlatformModal
@@ -433,13 +397,6 @@ export function PlatformsView() {
         onClose={() => setIsProfileModalOpen(false)}
         platforms={platforms}
         onSave={fetchData}
-      />
-
-      <HackerOneIntegrationModal
-        isOpen={isHackerOneModalOpen}
-        onClose={() => setIsHackerOneModalOpen(false)}
-        platformId={selectedPlatformId}
-        onSuccess={fetchData}
       />
     </div>
   );
