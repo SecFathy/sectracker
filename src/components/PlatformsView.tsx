@@ -1,403 +1,318 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, ExternalLink, Settings, Users } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { Progress } from '@/components/ui/progress';
+import { 
+  Plus, 
+  ExternalLink, 
+  Edit2, 
+  Users, 
+  Globe, 
+  Shield,
+  Target,
+  Building2
+} from 'lucide-react';
 import { PlatformModal } from './PlatformModal';
 import { EditPlatformModal } from './EditPlatformModal';
-import { PlatformProfileModal } from './PlatformProfileModal';
-import { ThemeToggle } from './ThemeToggle';
+import { ProgramModal } from './ProgramModal';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface Platform {
   id: string;
   name: string;
-  url: string;
+  url?: string;
+  description?: string;
   platform_type: string;
-  description: string;
   favicon_url?: string;
+  category?: string;
   is_enabled: boolean;
-  category: string;
+  programs?: Program[];
 }
 
-interface PlatformProfile {
+interface Program {
   id: string;
+  name: string;
+  company: string;
+  scope: string;
   platform_id: string;
-  username: string;
-  profile_url?: string;
-  reputation_points: number;
-  rank_position?: string;
-  total_bounties_earned: number;
-  bugs_submitted: number;
-  bugs_accepted: number;
-  platforms: {
-    name: string;
-    url: string;
-    favicon_url?: string;
-  };
-}
-
-interface Bug {
-  id: string;
-  title: string;
-  severity: string;
-  status: string;
-  created_at: string;
+  program_url?: string;
+  min_bounty?: number;
+  max_bounty?: number;
+  logo_url?: string;
+  program_type?: string;
+  management_type?: string;
+  is_active: boolean;
 }
 
 export function PlatformsView() {
   const [platforms, setPlatforms] = useState<Platform[]>([]);
-  const [profiles, setProfiles] = useState<PlatformProfile[]>([]);
-  const [bugs, setBugs] = useState<Bug[]>([]);
-  const [stats, setStats] = useState({
-    totalPlatforms: 0,
-    enabledPlatforms: 0,
-    totalProfiles: 0,
-    totalBugs: 0
-  });
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [selectedPlatform, setSelectedPlatform] = useState<Platform | null>(null);
-  const [selectedPlatformId, setSelectedPlatformId] = useState<string>('');
+  const [programs, setPrograms] = useState<Program[]>([]);
+  const [showPlatformModal, setShowPlatformModal] = useState(false);
+  const [showProgramModal, setShowProgramModal] = useState(false);
+  const [editingPlatform, setEditingPlatform] = useState<Platform | null>(null);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-
-  const fetchData = async () => {
-    try {
-      // Fetch platforms
-      const { data: platformsData, error: platformsError } = await supabase
-        .from('platforms')
-        .select('*')
-        .order('name');
-
-      if (platformsError) throw platformsError;
-
-      // Fetch user profiles with platform info
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('user_platform_profiles')
-        .select(`
-          id,
-          platform_id,
-          username,
-          profile_url,
-          reputation_points,
-          rank_position,
-          total_bounties_earned,
-          bugs_submitted,
-          bugs_accepted,
-          platforms (
-            name,
-            url,
-            favicon_url
-          )
-        `)
-        .order('created_at', { ascending: false });
-
-      if (profilesError) throw profilesError;
-
-      // Fetch bugs (using correct table name)
-      const { data: bugsData, error: bugsError } = await supabase
-        .from('bugs')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (bugsError) throw bugsError;
-
-      setPlatforms(platformsData || []);
-      setProfiles(profilesData || []);
-      setBugs(bugsData || []);
-
-      // Calculate stats
-      const enabledPlatforms = platformsData?.filter(p => p.is_enabled).length || 0;
-      setStats({
-        totalPlatforms: platformsData?.length || 0,
-        enabledPlatforms,
-        totalProfiles: profilesData?.length || 0,
-        totalBugs: bugsData?.length || 0
-      });
-
-    } catch (error: any) {
-      console.error('Error fetching data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load platform data",
-        variant: "destructive",
-      });
-    }
-  };
 
   useEffect(() => {
     fetchData();
   }, []);
 
-  const handleEditPlatform = (platform: Platform) => {
-    setSelectedPlatform(platform);
-    setIsEditModalOpen(true);
-  };
-
-  const handleDeletePlatform = async (platformId: string) => {
+  const fetchData = async () => {
     try {
-      const { error } = await supabase
-        .from('platforms')
-        .delete()
-        .eq('id', platformId);
+      const [platformsResponse, programsResponse] = await Promise.all([
+        supabase.from('platforms').select('*').order('name'),
+        supabase.from('programs').select('*').order('name')
+      ]);
 
-      if (error) throw error;
+      if (platformsResponse.error) throw platformsResponse.error;
+      if (programsResponse.error) throw programsResponse.error;
 
-      toast({
-        title: "Success",
-        description: "Platform deleted successfully!",
-      });
-
-      fetchData();
+      setPlatforms(platformsResponse.data || []);
+      setPrograms(programsResponse.data || []);
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message,
+        description: "Failed to load platforms and programs",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case 'bug_bounty': return 'bg-red-600';
+      case 'vdp': return 'bg-blue-600';
+      case 'private': return 'bg-purple-600';
+      case 'ctf': return 'bg-green-600';
+      default: return 'bg-gray-600';
+    }
+  };
+
+  const getTypeLabel = (type: string) => {
+    switch (type) {
+      case 'bug_bounty': return 'Bug Bounty';
+      case 'vdp': return 'VDP';
+      case 'private': return 'Private';
+      case 'ctf': return 'CTF';
+      default: return type;
+    }
+  };
+
+  const formatBountyRange = (program: Program) => {
+    if (program.min_bounty && program.max_bounty) {
+      return `$${program.min_bounty} - $${program.max_bounty}`;
+    } else if (program.max_bounty) {
+      return `Up to $${program.max_bounty}`;
+    } else if (program.min_bounty) {
+      return `From $${program.min_bounty}`;
+    }
+    return 'Not specified';
+  };
+
+  const getProgramsByPlatform = (platformId: string) => {
+    return programs.filter(program => program.platform_id === platformId && program.is_active);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-white">Loading platforms...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Theme Toggle */}
-      <div className="flex justify-end">
-        <ThemeToggle />
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold text-white">Bug Bounty Platforms</h1>
+        <div className="flex space-x-3">
+          <Button 
+            onClick={() => setShowProgramModal(true)}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            <Target className="h-4 w-4 mr-2" />
+            Add Program
+          </Button>
+          <Button 
+            onClick={() => setShowPlatformModal(true)}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Platform
+          </Button>
+        </div>
       </div>
 
-      {/* Overview Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-blue-400">{stats.totalPlatforms}</div>
-            <div className="text-sm text-muted-foreground">Total Platforms</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-green-400">{stats.enabledPlatforms}</div>
-            <div className="text-sm text-muted-foreground">Enabled Platforms</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-purple-400">{stats.totalProfiles}</div>
-            <div className="text-sm text-muted-foreground">Your Profiles</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-orange-400">{stats.totalBugs}</div>
-            <div className="text-sm text-muted-foreground">Bug Reports</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Your Platform Profiles */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5" />
-                Your Platform Profiles
-              </CardTitle>
-              <CardDescription>Platforms where you have created profiles</CardDescription>
-            </div>
-            <Button 
-              onClick={() => setIsProfileModalOpen(true)}
-              className="bg-primary hover:bg-primary/90"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Profile
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {profiles.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>No platform profiles yet. Add your first profile to get started!</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {profiles.map((profile) => (
-                <Card key={profile.id} className="border-border">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      {profile.platforms.favicon_url && (
-                        <img 
-                          src={profile.platforms.favicon_url} 
-                          alt="" 
-                          className="w-5 h-5"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                          }}
-                        />
-                      )}
-                      {profile.platforms.name}
-                    </CardTitle>
-                    <CardDescription>@{profile.username}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div>
-                        <div className="text-muted-foreground">Reputation</div>
-                        <div className="font-semibold">{profile.reputation_points}</div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {platforms.map((platform) => {
+          const platformPrograms = getProgramsByPlatform(platform.id);
+          
+          return (
+            <Card key={platform.id} className="bg-gray-800 border-gray-700">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center space-x-3">
+                    {platform.favicon_url ? (
+                      <img 
+                        src={platform.favicon_url} 
+                        alt={`${platform.name} favicon`}
+                        className="w-8 h-8 rounded"
+                      />
+                    ) : (
+                      <Globe className="h-8 w-8 text-blue-400" />
+                    )}
+                    <div>
+                      <CardTitle className="text-white flex items-center space-x-2">
+                        <span>{platform.name}</span>
+                        {platform.url && (
+                          <a
+                            href={platform.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-400 hover:text-blue-300"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                        )}
+                      </CardTitle>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <Badge className={`${getTypeColor(platform.platform_type)} text-white`}>
+                          {getTypeLabel(platform.platform_type)}
+                        </Badge>
+                        {platform.category && (
+                          <Badge variant="outline" className="border-gray-600 text-gray-300">
+                            {platform.category}
+                          </Badge>
+                        )}
                       </div>
-                      <div>
-                        <div className="text-muted-foreground">Rank</div>
-                        <div className="font-semibold">{profile.rank_position || 'N/A'}</div>
-                      </div>
-                      <div>
-                        <div className="text-muted-foreground">Bounties</div>
-                        <div className="font-semibold text-green-400">${profile.total_bounties_earned}</div>
-                      </div>
-                      <div>
-                        <div className="text-muted-foreground">Success Rate</div>
-                        <div className="font-semibold">
-                          {profile.bugs_submitted > 0 
-                            ? `${Math.round((profile.bugs_accepted / profile.bugs_submitted) * 100)}%`
-                            : 'N/A'
-                          }
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between pt-2">
-                      <div className="text-sm text-muted-foreground">
-                        {profile.bugs_accepted}/{profile.bugs_submitted} bugs accepted
-                      </div>
-                      {profile.profile_url && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(profile.profile_url, '_blank')}
-                        >
-                          <ExternalLink className="w-3 h-3" />
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* All Platforms Management */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="w-5 h-5" />
-                All Platforms Management
-              </CardTitle>
-              <CardDescription>Manage available platforms and their settings</CardDescription>
-            </div>
-            <Button 
-              onClick={() => setIsAddModalOpen(true)}
-              className="bg-primary hover:bg-primary/90"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Platform
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {platforms.map((platform) => (
-              <Card key={platform.id} className="border-border">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      {platform.favicon_url && (
-                        <img 
-                          src={platform.favicon_url} 
-                          alt="" 
-                          className="w-5 h-5"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                          }}
-                        />
-                      )}
-                      {platform.name}
-                    </CardTitle>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditPlatform(platform)}
-                      >
-                        <Edit className="w-3 h-3" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDeletePlatform(platform.id)}
-                        className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={platform.is_enabled ? "default" : "secondary"}>
-                      {platform.is_enabled ? 'Enabled' : 'Disabled'}
-                    </Badge>
-                    <Badge variant="outline">
-                      {platform.category}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="text-sm text-muted-foreground">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEditingPlatform(platform)}
+                    className="text-gray-400 hover:text-white"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                {platform.description && (
+                  <CardDescription className="text-gray-400 mt-2">
                     {platform.description}
+                  </CardDescription>
+                )}
+              </CardHeader>
+              
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-400">Active Programs</span>
+                    <span className="text-white font-medium">{platformPrograms.length}</span>
                   </div>
-                  <div className="flex items-center justify-between pt-2">
-                    <div className="text-sm text-muted-foreground">
-                      Type: {platform.platform_type}
+
+                  {platformPrograms.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-medium text-gray-300">Recent Programs:</h4>
+                      {platformPrograms.slice(0, 3).map((program) => (
+                        <div key={program.id} className="bg-gray-700 rounded-lg p-3">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center space-x-2 flex-1">
+                              {program.logo_url && (
+                                <img 
+                                  src={program.logo_url} 
+                                  alt={`${program.name} logo`}
+                                  className="w-6 h-6 rounded"
+                                />
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center space-x-2">
+                                  <p className="text-white font-medium truncate">{program.name}</p>
+                                  {program.program_type && (
+                                    <Badge 
+                                      variant="outline" 
+                                      className="border-gray-500 text-gray-300 text-xs"
+                                    >
+                                      {program.program_type}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-gray-400 text-sm truncate">{program.company}</p>
+                                <p className="text-green-400 text-xs">{formatBountyRange(program)}</p>
+                              </div>
+                            </div>
+                            {program.program_url && (
+                              <a
+                                href={program.program_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-400 hover:text-blue-300 ml-2"
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      {platformPrograms.length > 3 && (
+                        <p className="text-sm text-gray-500">
+                          +{platformPrograms.length - 3} more programs...
+                        </p>
+                      )}
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.open(platform.url, '_blank')}
-                    >
-                      <ExternalLink className="w-3 h-3" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+                  )}
 
-      {/* Modals */}
+                  {platformPrograms.length === 0 && (
+                    <div className="text-center py-4 text-gray-500">
+                      <Building2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No programs added yet</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {platforms.length === 0 && (
+        <div className="text-center py-12">
+          <Globe className="h-12 w-12 mx-auto text-gray-600 mb-4" />
+          <h3 className="text-lg font-medium text-gray-400 mb-2">No platforms yet</h3>
+          <p className="text-gray-500 mb-4">Add your first bug bounty platform to get started</p>
+          <Button onClick={() => setShowPlatformModal(true)} className="bg-blue-600 hover:bg-blue-700">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Platform
+          </Button>
+        </div>
+      )}
+
       <PlatformModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
+        isOpen={showPlatformModal}
+        onClose={() => setShowPlatformModal(false)}
         onSave={fetchData}
       />
 
-      <EditPlatformModal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        platform={selectedPlatform}
-        onSave={fetchData}
-      />
-
-      <PlatformProfileModal
-        isOpen={isProfileModalOpen}
-        onClose={() => setIsProfileModalOpen(false)}
+      <ProgramModal
+        isOpen={showProgramModal}
+        onClose={() => setShowProgramModal(false)}
         platforms={platforms}
         onSave={fetchData}
       />
+
+      {editingPlatform && (
+        <EditPlatformModal
+          isOpen={!!editingPlatform}
+          onClose={() => setEditingPlatform(null)}
+          platform={editingPlatform}
+          onSave={fetchData}
+        />
+      )}
     </div>
   );
 }

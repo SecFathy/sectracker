@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -7,6 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, CheckSquare, Monitor, Smartphone, Computer } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ChecklistDetailView } from './ChecklistDetailView';
+import { ChecklistModal } from './ChecklistModal';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface ChecklistItem {
   id: string;
@@ -24,37 +27,84 @@ interface Checklist {
 export function ChecklistsView() {
   const { theme } = useTheme();
   const isHackerTheme = theme === 'hacker';
+  const { toast } = useToast();
   
   const [selectedChecklistId, setSelectedChecklistId] = useState<string | null>(null);
-  const [checklists, setChecklists] = useState<Checklist[]>([
-    {
-      id: '1',
-      name: 'Web Application Security',
-      type: 'web',
-      items: [
-        { id: '1', text: 'Test for SQL Injection', completed: true },
-        { id: '2', text: 'Test for XSS (Reflected, Stored, DOM)', completed: true },
-        { id: '3', text: 'Test for CSRF vulnerabilities', completed: false },
-        { id: '4', text: 'Check for insecure direct object references', completed: false },
-        { id: '5', text: 'Test authentication bypass', completed: false },
-        { id: '6', text: 'Check for session management issues', completed: false },
-        { id: '7', text: 'Test for directory traversal', completed: false },
-        { id: '8', text: 'Check for command injection', completed: false }
-      ]
-    },
-    {
-      id: '2',
-      name: 'Mobile Application Security',
-      type: 'mobile',
-      items: [
-        { id: '1', text: 'Test for insecure data storage', completed: false },
-        { id: '2', text: 'Check for weak cryptography', completed: false },
-        { id: '3', text: 'Test for insecure communication', completed: false },
-        { id: '4', text: 'Check for improper platform usage', completed: false },
-        { id: '5', text: 'Test for reverse engineering protection', completed: false }
-      ]
+  const [checklists, setChecklists] = useState<Checklist[]>([]);
+  const [showChecklistModal, setShowChecklistModal] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchChecklists();
+  }, []);
+
+  const fetchChecklists = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: checklistsData, error: checklistsError } = await supabase
+        .from('security_checklists')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (checklistsError) throw checklistsError;
+
+      // For now, we'll use the existing mock data structure
+      // In a future update, we can fetch the actual checklist items
+      const mockChecklists: Checklist[] = [
+        {
+          id: '1',
+          name: 'Web Application Security',
+          type: 'web',
+          items: [
+            { id: '1', text: 'Test for SQL Injection', completed: true },
+            { id: '2', text: 'Test for XSS (Reflected, Stored, DOM)', completed: true },
+            { id: '3', text: 'Test for CSRF vulnerabilities', completed: false },
+            { id: '4', text: 'Check for insecure direct object references', completed: false },
+            { id: '5', text: 'Test authentication bypass', completed: false },
+            { id: '6', text: 'Check for session management issues', completed: false },
+            { id: '7', text: 'Test for directory traversal', completed: false },
+            { id: '8', text: 'Check for command injection', completed: false }
+          ]
+        },
+        {
+          id: '2',
+          name: 'Mobile Application Security',
+          type: 'mobile',
+          items: [
+            { id: '1', text: 'Test for insecure data storage', completed: false },
+            { id: '2', text: 'Check for weak cryptography', completed: false },
+            { id: '3', text: 'Test for insecure communication', completed: false },
+            { id: '4', text: 'Check for improper platform usage', completed: false },
+            { id: '5', text: 'Test for reverse engineering protection', completed: false }
+          ]
+        }
+      ];
+
+      // Combine database checklists with mock data
+      const combinedChecklists = [
+        ...mockChecklists,
+        ...(checklistsData || []).map(checklist => ({
+          id: checklist.id,
+          name: checklist.name,
+          type: checklist.checklist_type as 'web' | 'mobile' | 'desktop' | 'api',
+          items: [] // Will be populated when we implement checklist items
+        }))
+      ];
+
+      setChecklists(combinedChecklists);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to load checklists",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-  ]);
+  };
 
   if (selectedChecklistId) {
     return (
@@ -97,9 +147,18 @@ export function ChecklistsView() {
   };
 
   const getProgress = (checklist: Checklist) => {
+    if (checklist.items.length === 0) return 0;
     const completed = checklist.items.filter(item => item.completed).length;
     return Math.round((completed / checklist.items.length) * 100);
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-white">Loading checklists...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -107,7 +166,10 @@ export function ChecklistsView() {
         <h1 className={`text-3xl font-bold ${isHackerTheme ? "text-green-400 font-mono" : "text-white"}`}>
           Security Checklists
         </h1>
-        <Button className={isHackerTheme ? "bg-green-600 hover:bg-green-700 text-black font-mono" : "bg-blue-600 hover:bg-blue-700"}>
+        <Button 
+          onClick={() => setShowChecklistModal(true)}
+          className={isHackerTheme ? "bg-green-600 hover:bg-green-700 text-black font-mono" : "bg-blue-600 hover:bg-blue-700"}
+        >
           <Plus className="h-4 w-4 mr-2" />
           Add Checklist
         </Button>
@@ -175,12 +237,23 @@ export function ChecklistsView() {
                       +{checklist.items.length - 3} more items...
                     </p>
                   )}
+                  {checklist.items.length === 0 && (
+                    <p className={`text-sm ${isHackerTheme ? "text-green-500 font-mono" : "text-gray-500"}`}>
+                      No items yet. Click to add items.
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>
           );
         })}
       </div>
+
+      <ChecklistModal
+        isOpen={showChecklistModal}
+        onClose={() => setShowChecklistModal(false)}
+        onSave={fetchChecklists}
+      />
     </div>
   );
 }
