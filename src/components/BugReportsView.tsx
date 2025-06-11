@@ -88,14 +88,12 @@ export function BugReportsView() {
 
   const uniquePrograms = [...new Set(reports.map(r => r.program))];
 
-  const handleSaveReport = (report: any) => {
-    if (editingReport) {
-      setReports(reports.map(r => r.id === editingReport.id ? { ...report, id: editingReport.id } : r));
-    } else {
-      setReports([...reports, { ...report, id: Date.now().toString() }]);
-    }
+  const handleSaveReport = () => {
+    // The modal handles the actual saving to the database
+    // We just need to refresh or handle success here
     setIsModalOpen(false);
     setEditingReport(null);
+    // In a real app, you might want to refetch the reports here
   };
 
   const handleEditReport = (report: BugReport) => {
@@ -256,7 +254,6 @@ export function BugReportsView() {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onSave={handleSaveReport}
-        editingReport={editingReport}
       />
     </div>
   );
