@@ -1,12 +1,14 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Lightbulb, Copy, Eye, Search, Filter } from 'lucide-react';
+import { Plus, Lightbulb, Copy, Eye, Search, Filter, Edit, Trash2 } from 'lucide-react';
 import { TipModal } from '@/components/TipModal';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface Tip {
   id: string;
@@ -14,45 +16,72 @@ interface Tip {
   category: string;
   content: string;
   tags: string[];
-  dateAdded: string;
+  created_at: string;
 }
 
 export function TipsView() {
-  const [tips, setTips] = useState<Tip[]>([
-    {
-      id: '1',
-      title: 'XSS in AngularJS Applications',
-      category: 'XSS',
-      content: `When testing AngularJS applications, try these payloads:
-{{constructor.constructor('alert(1)')()}}
-{{$on.constructor('alert(1)')()}}
-{{[].pop.constructor('alert(1)')()}}
-
-These work because AngularJS evaluates expressions in the template context.`,
-      tags: ['xss', 'angularjs', 'javascript'],
-      dateAdded: '2024-01-15'
-    },
-    {
-      id: '2',
-      title: 'SQL Injection Bypass Techniques',
-      category: 'SQL Injection',
-      content: `Common WAF bypass techniques:
-- Use /**/ instead of spaces: SELECT/**/password/**/FROM/**/users
-- Unicode normalization: ﹪27UNION﹪27 
-- Case variation: UnIoN SeLeCt
-- Inline comments: SELECT/*comment*/password/**/FROM/**/users`,
-      tags: ['sqli', 'waf-bypass', 'database'],
-      dateAdded: '2024-01-10'
-    }
-  ]);
-
+  const [tips, setTips] = useState<Tip[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [selectedTip, setSelectedTip] = useState<Tip | null>(null);
+  const [editingTip, setEditingTip] = useState<Tip | null>(null);
   const [filters, setFilters] = useState({
     category: 'all',
     tag: 'all',
     search: ''
   });
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchTips();
+  }, []);
+
+  const fetchTips = async () => {
+    try {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('security_tips')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching tips:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch security tips",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const formattedTips: Tip[] = data?.map(tip => ({
+        id: tip.id,
+        title: tip.title,
+        category: tip.category || 'General',
+        content: tip.content,
+        tags: tip.tags || [],
+        created_at: tip.created_at
+      })) || [];
+
+      setTips(formattedTips);
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch security tips",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Get unique categories and tags for filters
   const uniqueCategories = [...new Set(tips.map(tip => tip.category))].filter(Boolean);
@@ -82,14 +111,117 @@ These work because AngularJS evaluates expressions in the template context.`,
 
   const copyToClipboard = (content: string) => {
     navigator.clipboard.writeText(content);
+    toast({
+      title: "Copied",
+      description: "Content copied to clipboard"
+    });
   };
+
+  const handleSaveTip = async (tipData: any) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      if (editingTip) {
+        const { error } = await supabase
+          .from('security_tips')
+          .update({
+            title: tipData.title,
+            category: tipData.category,
+            content: tipData.content,
+            tags: tipData.tags,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', editingTip.id);
+
+        if (error) throw error;
+
+        toast({
+          title: "Success",
+          description: "Security tip updated successfully"
+        });
+      } else {
+        const { error } = await supabase
+          .from('security_tips')
+          .insert({
+            user_id: user.id,
+            title: tipData.title,
+            category: tipData.category,
+            content: tipData.content,
+            tags: tipData.tags
+          });
+
+        if (error) throw error;
+
+        toast({
+          title: "Success",
+          description: "Security tip created successfully"
+        });
+      }
+
+      fetchTips();
+      setShowModal(false);
+      setEditingTip(null);
+    } catch (error) {
+      console.error('Error saving tip:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save security tip",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleEditTip = (tip: Tip) => {
+    setEditingTip(tip);
+    setShowModal(true);
+  };
+
+  const handleDeleteTip = async (tipId: string) => {
+    try {
+      const { error } = await supabase
+        .from('security_tips')
+        .delete()
+        .eq('id', tipId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Security tip deleted successfully"
+      });
+
+      fetchTips();
+    } catch (error) {
+      console.error('Error deleting tip:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete security tip",
+        variant: "destructive"
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-3xl font-bold text-white">Tips & Tricks</h1>
+        <div className="text-center py-8 text-gray-400">
+          Loading security tips...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-white">Tips & Tricks</h1>
         <Button 
-          onClick={() => setShowModal(true)}
+          onClick={() => {
+            setEditingTip(null);
+            setShowModal(true);
+          }}
           className="bg-blue-600 hover:bg-blue-700"
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -183,7 +315,7 @@ These work because AngularJS evaluates expressions in the template context.`,
                     <Badge className={`${getCategoryColor(tip.category)} text-white`}>
                       {tip.category}
                     </Badge>
-                    <span className="text-xs text-gray-400">{tip.dateAdded}</span>
+                    <span className="text-xs text-gray-400">{new Date(tip.created_at).toLocaleDateString()}</span>
                   </div>
                 </div>
                 <div className="flex space-x-1">
@@ -202,6 +334,22 @@ These work because AngularJS evaluates expressions in the template context.`,
                     className="text-gray-400 hover:text-white hover:bg-gray-700"
                   >
                     <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleEditTip(tip)}
+                    className="text-gray-400 hover:text-white hover:bg-gray-700"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleDeleteTip(tip.id)}
+                    className="text-red-400 hover:text-red-300 hover:bg-gray-700"
+                  >
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
@@ -224,7 +372,7 @@ These work because AngularJS evaluates expressions in the template context.`,
         ))}
       </div>
 
-      {filteredTips.length === 0 && (
+      {filteredTips.length === 0 && !loading && (
         <div className="text-center py-8">
           <p className="text-gray-400">
             {tips.length === 0 ? "No tips yet. Add your first security tip!" : "No tips match the current filters."}
@@ -234,11 +382,12 @@ These work because AngularJS evaluates expressions in the template context.`,
 
       <TipModal
         isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        onSave={(tip) => {
-          setTips([...tips, { ...tip, id: Date.now().toString(), dateAdded: new Date().toISOString().split('T')[0] }]);
+        onClose={() => {
           setShowModal(false);
+          setEditingTip(null);
         }}
+        onSave={handleSaveTip}
+        tip={editingTip}
       />
 
       {selectedTip && (

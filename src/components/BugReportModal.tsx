@@ -19,9 +19,10 @@ interface BugReportModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: () => void;
+  editingReport?: any;
 }
 
-export function BugReportModal({ isOpen, onClose, onSave }: BugReportModalProps) {
+export function BugReportModal({ isOpen, onClose, onSave, editingReport }: BugReportModalProps) {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [formData, setFormData] = useState({
     program_id: '',
@@ -42,8 +43,37 @@ export function BugReportModal({ isOpen, onClose, onSave }: BugReportModalProps)
   useEffect(() => {
     if (isOpen) {
       fetchPrograms();
+      if (editingReport) {
+        setFormData({
+          program_id: editingReport.program_id || '',
+          title: editingReport.title || '',
+          description: editingReport.description || '',
+          severity: editingReport.severity || 'Medium',
+          status: editingReport.status || 'Draft',
+          vulnerability_type: editingReport.vulnerability_type || '',
+          poc_steps: editingReport.poc_steps || '',
+          impact_description: editingReport.impact_description || '',
+          remediation_suggestion: editingReport.remediation_suggestion || '',
+          bounty_amount: editingReport.bounty_amount || 0,
+          submission_date: editingReport.submission_date || '',
+        });
+      } else {
+        setFormData({
+          program_id: '',
+          title: '',
+          description: '',
+          severity: 'Medium',
+          status: 'Draft',
+          vulnerability_type: '',
+          poc_steps: '',
+          impact_description: '',
+          remediation_suggestion: '',
+          bounty_amount: 0,
+          submission_date: '',
+        });
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, editingReport]);
 
   const fetchPrograms = async () => {
     try {
@@ -74,34 +104,35 @@ export function BugReportModal({ isOpen, onClose, onSave }: BugReportModalProps)
       const bugData = {
         ...formData,
         user_id: user.id,
-        program_id: formData.program_id || null, // Convert empty string to null
+        program_id: formData.program_id || null,
         submission_date: formData.submission_date || null,
       };
 
-      const { error } = await supabase
-        .from('bugs')
-        .insert(bugData);
+      if (editingReport) {
+        const { error } = await supabase
+          .from('bugs')
+          .update(bugData)
+          .eq('id', editingReport.id);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      toast({
-        title: "Success",
-        description: "Bug report created successfully!",
-      });
+        toast({
+          title: "Success",
+          description: "Bug report updated successfully!",
+        });
+      } else {
+        const { error } = await supabase
+          .from('bugs')
+          .insert(bugData);
 
-      setFormData({
-        program_id: '',
-        title: '',
-        description: '',
-        severity: 'Medium',
-        status: 'Draft',
-        vulnerability_type: '',
-        poc_steps: '',
-        impact_description: '',
-        remediation_suggestion: '',
-        bounty_amount: 0,
-        submission_date: '',
-      });
+        if (error) throw error;
+
+        toast({
+          title: "Success",
+          description: "Bug report created successfully!",
+        });
+      }
+
       onSave();
       onClose();
     } catch (error: any) {
@@ -119,7 +150,7 @@ export function BugReportModal({ isOpen, onClose, onSave }: BugReportModalProps)
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create Bug Report</DialogTitle>
+          <DialogTitle>{editingReport ? 'Edit' : 'Create'} Bug Report</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -153,6 +184,38 @@ export function BugReportModal({ isOpen, onClose, onSave }: BugReportModalProps)
                   <SelectItem value="Informational">Informational</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="status">Status</Label>
+              <Select value={formData.status} onValueChange={(value: 'Draft' | 'Submitted' | 'Triaged' | 'Accepted' | 'Duplicate' | 'Not Applicable' | 'Resolved' | 'Bounty Awarded') => setFormData({...formData, status: value})}>
+                <SelectTrigger className="bg-gray-700 border-gray-600">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-700 border-gray-600">
+                  <SelectItem value="Draft">Draft</SelectItem>
+                  <SelectItem value="Submitted">Submitted</SelectItem>
+                  <SelectItem value="Triaged">Triaged</SelectItem>
+                  <SelectItem value="Accepted">Accepted</SelectItem>
+                  <SelectItem value="Duplicate">Duplicate</SelectItem>
+                  <SelectItem value="Not Applicable">Not Applicable</SelectItem>
+                  <SelectItem value="Resolved">Resolved</SelectItem>
+                  <SelectItem value="Bounty Awarded">Bounty Awarded</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="submission_date">Submission Date</Label>
+              <Input
+                id="submission_date"
+                type="date"
+                value={formData.submission_date}
+                onChange={(e) => setFormData({...formData, submission_date: e.target.value})}
+                className="bg-gray-700 border-gray-600"
+              />
             </div>
           </div>
 
@@ -223,29 +286,16 @@ export function BugReportModal({ isOpen, onClose, onSave }: BugReportModalProps)
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="bounty_amount">Bounty Amount ($)</Label>
-              <Input
-                id="bounty_amount"
-                type="number"
-                step="0.01"
-                value={formData.bounty_amount}
-                onChange={(e) => setFormData({...formData, bounty_amount: parseFloat(e.target.value) || 0})}
-                className="bg-gray-700 border-gray-600"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="submission_date">Submission Date</Label>
-              <Input
-                id="submission_date"
-                type="date"
-                value={formData.submission_date}
-                onChange={(e) => setFormData({...formData, submission_date: e.target.value})}
-                className="bg-gray-700 border-gray-600"
-              />
-            </div>
+          <div>
+            <Label htmlFor="bounty_amount">Bounty Amount ($)</Label>
+            <Input
+              id="bounty_amount"
+              type="number"
+              step="0.01"
+              value={formData.bounty_amount}
+              onChange={(e) => setFormData({...formData, bounty_amount: parseFloat(e.target.value) || 0})}
+              className="bg-gray-700 border-gray-600"
+            />
           </div>
 
           <div className="flex justify-end space-x-2">
@@ -253,7 +303,7 @@ export function BugReportModal({ isOpen, onClose, onSave }: BugReportModalProps)
               Cancel
             </Button>
             <Button type="submit" disabled={loading} className="bg-cyan-600 hover:bg-cyan-700">
-              {loading ? 'Creating...' : 'Create Bug Report'}
+              {loading ? (editingReport ? 'Updating...' : 'Creating...') : (editingReport ? 'Update Bug Report' : 'Create Bug Report')}
             </Button>
           </div>
         </form>

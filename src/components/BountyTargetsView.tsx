@@ -2,55 +2,77 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Target, Calendar, DollarSign, Clock, Edit, Trash2 } from 'lucide-react';
+import { Plus, Target, Calendar, Clock, Edit, Trash2 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { BountyTargetModal } from './BountyTargetModal';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface BountyTarget {
   id: string;
   title: string;
-  targetAmount: number;
-  currentAmount: number;
+  target_amount: number;
+  current_amount: number;
   deadline: string;
   description?: string;
-  isActive: boolean;
+  is_active: boolean;
+  created_at: string;
 }
 
 export function BountyTargetsView() {
   const { theme } = useTheme();
   const isHackerTheme = theme === 'hacker';
+  const { toast } = useToast();
   
   const [targets, setTargets] = useState<BountyTarget[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTarget, setEditingTarget] = useState<BountyTarget | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data
   useEffect(() => {
-    setTargets([
-      {
-        id: '1',
-        title: 'Q1 2024 Bounty Goal',
-        targetAmount: 10000,
-        currentAmount: 6500,
-        deadline: '2024-03-31',
-        description: 'First quarter bounty earning target',
-        isActive: true
-      },
-      {
-        id: '2',
-        title: 'Annual Goal 2024',
-        targetAmount: 50000,
-        currentAmount: 15000,
-        deadline: '2024-12-31',
-        description: 'Full year bounty target',
-        isActive: true
-      }
-    ]);
+    fetchBountyTargets();
   }, []);
+
+  const fetchBountyTargets = async () => {
+    try {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('bounty_targets')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching bounty targets:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch bounty targets",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      setTargets(data || []);
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch bounty targets",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const calculateTimeRemaining = (deadline: string) => {
     const now = new Date();
@@ -70,12 +92,8 @@ export function BountyTargetsView() {
     return Math.min((current / target) * 100, 100);
   };
 
-  const handleSaveTarget = (target: any) => {
-    if (editingTarget) {
-      setTargets(targets.map(t => t.id === editingTarget.id ? { ...target, id: editingTarget.id } : t));
-    } else {
-      setTargets([...targets, { ...target, id: Date.now().toString() }]);
-    }
+  const handleSaveTarget = () => {
+    fetchBountyTargets(); // Refresh data after saving
     setIsModalOpen(false);
     setEditingTarget(null);
   };
@@ -85,11 +103,50 @@ export function BountyTargetsView() {
     setIsModalOpen(true);
   };
 
-  const handleDeleteTarget = (targetId: string) => {
-    setTargets(targets.filter(t => t.id !== targetId));
+  const handleDeleteTarget = async (targetId: string) => {
+    try {
+      const { error } = await supabase
+        .from('bounty_targets')
+        .update({ is_active: false })
+        .eq('id', targetId);
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to delete bounty target",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      toast({
+        title: "Success",
+        description: "Bounty target deleted successfully"
+      });
+
+      fetchBountyTargets();
+    } catch (error) {
+      console.error('Error deleting bounty target:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete bounty target",
+        variant: "destructive"
+      });
+    }
   };
 
-  const activeTargets = targets.filter(t => t.isActive);
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <h1 className={`text-3xl font-bold ${isHackerTheme ? "text-green-400 font-mono" : "text-white"}`}>
+          Bounty Targets
+        </h1>
+        <div className={`text-center py-8 ${isHackerTheme ? "text-green-400 font-mono" : "text-gray-400"}`}>
+          Loading bounty targets...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -107,11 +164,11 @@ export function BountyTargetsView() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {activeTargets.map((target) => {
+        {targets.map((target) => {
           const timeRemaining = calculateTimeRemaining(target.deadline);
-          const progressPercentage = getProgressPercentage(target.currentAmount, target.targetAmount);
+          const progressPercentage = getProgressPercentage(target.current_amount, target.target_amount);
           const isNearDeadline = timeRemaining.days <= 7 && !timeRemaining.expired;
-          const isCompleted = target.currentAmount >= target.targetAmount;
+          const isCompleted = target.current_amount >= target.target_amount;
 
           return (
             <Card key={target.id} className={`${isHackerTheme ? "bg-black border-green-600" : "bg-gray-800 border-gray-700"} ${isNearDeadline ? 'border-orange-500' : ''} ${isCompleted ? 'border-green-500' : ''}`}>
@@ -154,7 +211,7 @@ export function BountyTargetsView() {
                       Progress
                     </span>
                     <span className={`text-sm font-medium ${isHackerTheme ? "text-green-400 font-mono" : "text-white"}`}>
-                      ${target.currentAmount.toLocaleString()} / ${target.targetAmount.toLocaleString()}
+                      ${target.current_amount.toLocaleString()} / ${target.target_amount.toLocaleString()}
                     </span>
                   </div>
                   <Progress 
@@ -166,7 +223,7 @@ export function BountyTargetsView() {
                       {progressPercentage.toFixed(1)}% Complete
                     </span>
                     <span className={`text-xs ${isHackerTheme ? "text-green-500 font-mono" : "text-gray-400"}`}>
-                      ${(target.targetAmount - target.currentAmount).toLocaleString()} remaining
+                      ${(target.target_amount - target.current_amount).toLocaleString()} remaining
                     </span>
                   </div>
                 </div>
@@ -236,7 +293,7 @@ export function BountyTargetsView() {
         })}
       </div>
 
-      {activeTargets.length === 0 && (
+      {targets.length === 0 && !loading && (
         <Card className={isHackerTheme ? "bg-black border-green-600" : "bg-gray-800 border-gray-700"}>
           <CardContent className="p-8 text-center">
             <Target className={`h-12 w-12 mx-auto mb-4 ${isHackerTheme ? "text-green-600" : "text-gray-400"}`} />

@@ -9,6 +9,45 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      bounty_targets: {
+        Row: {
+          created_at: string | null
+          current_amount: number | null
+          deadline: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          target_amount: number
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          current_amount?: number | null
+          deadline: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          target_amount: number
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          current_amount?: number | null
+          deadline?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          target_amount?: number
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       bugs: {
         Row: {
           bounty_amount: number | null
