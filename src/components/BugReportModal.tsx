@@ -9,10 +9,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+interface Platform {
+  id: string;
+  name: string;
+}
+
 interface Program {
   id: string;
   name: string;
   company: string;
+  platform_id: string;
+  platforms?: Platform;
 }
 
 interface BugReportModalProps {
@@ -23,7 +30,10 @@ interface BugReportModalProps {
 }
 
 export function BugReportModal({ isOpen, onClose, onSave, editingReport }: BugReportModalProps) {
+  const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
+  const [filteredPrograms, setFilteredPrograms] = useState<Program[]>([]);
+  const [selectedPlatform, setSelectedPlatform] = useState<string>('');
   const [formData, setFormData] = useState({
     program_id: '',
     title: '',
@@ -42,6 +52,7 @@ export function BugReportModal({ isOpen, onClose, onSave, editingReport }: BugRe
 
   useEffect(() => {
     if (isOpen) {
+      fetchPlatforms();
       fetchPrograms();
       if (editingReport) {
         setFormData({
@@ -57,6 +68,14 @@ export function BugReportModal({ isOpen, onClose, onSave, editingReport }: BugRe
           bounty_amount: editingReport.bounty_amount || 0,
           submission_date: editingReport.submission_date || '',
         });
+        
+        // If editing, find the platform for the selected program
+        if (editingReport.program_id && programs.length > 0) {
+          const program = programs.find(p => p.id === editingReport.program_id);
+          if (program) {
+            setSelectedPlatform(program.platform_id);
+          }
+        }
       } else {
         setFormData({
           program_id: '',
@@ -71,20 +90,67 @@ export function BugReportModal({ isOpen, onClose, onSave, editingReport }: BugRe
           bounty_amount: 0,
           submission_date: '',
         });
+        setSelectedPlatform('');
       }
     }
-  }, [isOpen, editingReport]);
+  }, [isOpen, editingReport, programs]);
+
+  useEffect(() => {
+    // Filter programs based on selected platform
+    if (selectedPlatform) {
+      const filtered = programs.filter(program => program.platform_id === selectedPlatform);
+      setFilteredPrograms(filtered);
+    } else {
+      setFilteredPrograms(programs);
+    }
+    
+    // Reset program selection if it doesn't match the selected platform
+    if (selectedPlatform && formData.program_id) {
+      const program = programs.find(p => p.id === formData.program_id);
+      if (program && program.platform_id !== selectedPlatform) {
+        setFormData(prev => ({ ...prev, program_id: '' }));
+      }
+    }
+  }, [selectedPlatform, programs, formData.program_id]);
+
+  const fetchPlatforms = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('platforms')
+        .select('id, name')
+        .eq('is_enabled', true)
+        .order('name');
+
+      if (error) throw error;
+      setPlatforms(data || []);
+    } catch (error: any) {
+      console.error('Error fetching platforms:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load platforms",
+        variant: "destructive",
+      });
+    }
+  };
 
   const fetchPrograms = async () => {
     try {
       const { data, error } = await supabase
         .from('programs')
-        .select('id, name, company')
-        .eq('is_active', true);
+        .select(`
+          id, 
+          name, 
+          company, 
+          platform_id,
+          platforms!inner(id, name)
+        `)
+        .eq('is_active', true)
+        .order('company');
 
       if (error) throw error;
       setPrograms(data || []);
     } catch (error: any) {
+      console.error('Error fetching programs:', error);
       toast({
         title: "Error",
         description: "Failed to load programs",
@@ -155,13 +221,33 @@ export function BugReportModal({ isOpen, onClose, onSave, editingReport }: BugRe
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="program">Program</Label>
-              <Select value={formData.program_id} onValueChange={(value) => setFormData({...formData, program_id: value})}>
+              <Label htmlFor="platform">Platform</Label>
+              <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
                 <SelectTrigger className="bg-gray-700 border-gray-600">
-                  <SelectValue placeholder="Select a program" />
+                  <SelectValue placeholder="Select a platform first" />
                 </SelectTrigger>
                 <SelectContent className="bg-gray-700 border-gray-600">
-                  {programs.map((program) => (
+                  {platforms.map((platform) => (
+                    <SelectItem key={platform.id} value={platform.id}>
+                      {platform.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="program">Program</Label>
+              <Select 
+                value={formData.program_id} 
+                onValueChange={(value) => setFormData({...formData, program_id: value})}
+                disabled={!selectedPlatform}
+              >
+                <SelectTrigger className="bg-gray-700 border-gray-600">
+                  <SelectValue placeholder={selectedPlatform ? "Select a program" : "Select platform first"} />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-700 border-gray-600">
+                  {filteredPrograms.map((program) => (
                     <SelectItem key={program.id} value={program.id}>
                       {program.company} - {program.name}
                     </SelectItem>
@@ -169,7 +255,9 @@ export function BugReportModal({ isOpen, onClose, onSave, editingReport }: BugRe
                 </SelectContent>
               </Select>
             </div>
+          </div>
 
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="severity">Severity</Label>
               <Select value={formData.severity} onValueChange={(value: 'Critical' | 'High' | 'Medium' | 'Low' | 'Informational') => setFormData({...formData, severity: value})}>
@@ -185,9 +273,7 @@ export function BugReportModal({ isOpen, onClose, onSave, editingReport }: BugRe
                 </SelectContent>
               </Select>
             </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="status">Status</Label>
               <Select value={formData.status} onValueChange={(value: 'Draft' | 'Submitted' | 'Triaged' | 'Accepted' | 'Duplicate' | 'Not Applicable' | 'Resolved' | 'Bounty Awarded') => setFormData({...formData, status: value})}>
@@ -206,7 +292,9 @@ export function BugReportModal({ isOpen, onClose, onSave, editingReport }: BugRe
                 </SelectContent>
               </Select>
             </div>
+          </div>
 
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="submission_date">Submission Date</Label>
               <Input
@@ -214,6 +302,18 @@ export function BugReportModal({ isOpen, onClose, onSave, editingReport }: BugRe
                 type="date"
                 value={formData.submission_date}
                 onChange={(e) => setFormData({...formData, submission_date: e.target.value})}
+                className="bg-gray-700 border-gray-600"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="bounty_amount">Bounty Amount ($)</Label>
+              <Input
+                id="bounty_amount"
+                type="number"
+                step="0.01"
+                value={formData.bounty_amount}
+                onChange={(e) => setFormData({...formData, bounty_amount: parseFloat(e.target.value) || 0})}
                 className="bg-gray-700 border-gray-600"
               />
             </div>
@@ -283,18 +383,6 @@ export function BugReportModal({ isOpen, onClose, onSave, editingReport }: BugRe
               onChange={(e) => setFormData({...formData, remediation_suggestion: e.target.value})}
               className="bg-gray-700 border-gray-600"
               rows={3}
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="bounty_amount">Bounty Amount ($)</Label>
-            <Input
-              id="bounty_amount"
-              type="number"
-              step="0.01"
-              value={formData.bounty_amount}
-              onChange={(e) => setFormData({...formData, bounty_amount: parseFloat(e.target.value) || 0})}
-              className="bg-gray-700 border-gray-600"
             />
           </div>
 

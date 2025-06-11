@@ -7,6 +7,7 @@ import { QuickNote } from '@/components/QuickNote';
 import { DndContext, closestCenter, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, rectSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { DraggableDashboardCard } from '@/components/DraggableDashboardCard';
+import { useToast } from '@/hooks/use-toast';
 
 interface DashboardStats {
   totalPlatforms: number;
@@ -15,6 +16,8 @@ interface DashboardStats {
   totalChecklists: number;
   totalTips: number;
   readingItems: number;
+  activeBountyTargets: number;
+  totalBountyTarget: number;
   severityStats: {
     Critical: number;
     High: number;
@@ -41,6 +44,8 @@ export function Dashboard() {
     totalChecklists: 0,
     totalTips: 0,
     readingItems: 0,
+    activeBountyTargets: 0,
+    totalBountyTarget: 0,
     severityStats: {
       Critical: 0,
       High: 0,
@@ -60,9 +65,35 @@ export function Dashboard() {
   ]);
 
   const [userName, setUserName] = useState('Security Researcher');
+  const { toast } = useToast();
 
   useEffect(() => {
-    const fetchStats = async () => {
+    fetchStats();
+    
+    // Set up real-time subscription for bugs table to update severity stats
+    const bugsChannel = supabase
+      .channel('bugs-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'bugs'
+        },
+        () => {
+          console.log('Bug data changed, refreshing stats...');
+          fetchStats();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(bugsChannel);
+    };
+  }, []);
+
+  const fetchStats = async () => {
+    try {
       const user = await supabase.auth.getUser();
       if (!user.data.user) return;
 
@@ -114,6 +145,15 @@ export function Dashboard() {
         Informational: 0,
       };
 
+      // Fetch bounty targets stats
+      const { data: bountyTargets } = await supabase
+        .from('bounty_targets')
+        .select('target_amount, is_active')
+        .eq('user_id', userId);
+
+      const activeBountyTargets = bountyTargets?.filter(target => target.is_active).length || 0;
+      const totalBountyTarget = bountyTargets?.reduce((sum, target) => sum + (target.target_amount || 0), 0) || 0;
+
       // Fetch other stats
       const { count: checklistsCount } = await supabase
         .from('security_checklists')
@@ -137,12 +177,19 @@ export function Dashboard() {
         totalChecklists: checklistsCount || 0,
         totalTips: tipsCount || 0,
         readingItems: readingCount || 0,
+        activeBountyTargets,
+        totalBountyTarget,
         severityStats,
       });
-    };
-
-    fetchStats();
-  }, []);
+    } catch (error: any) {
+      console.error('Error fetching dashboard stats:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load dashboard statistics",
+        variant: "destructive",
+      });
+    }
+  };
 
   const dashboardCards: DashboardCard[] = [
     {
@@ -212,7 +259,14 @@ export function Dashboard() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-white">Dashboard</h1>
+        <div>
+          <h1 className="text-3xl font-bold text-white">Dashboard</h1>
+          {stats.activeBountyTargets > 0 && (
+            <div className="text-sm text-gray-400 mt-1">
+              Active Bounty Targets: {stats.activeBountyTargets} (${stats.totalBountyTarget.toFixed(2)} total)
+            </div>
+          )}
+        </div>
         <div className="text-sm text-gray-400">
           Welcome back, {userName}
         </div>
@@ -245,21 +299,21 @@ export function Dashboard() {
             <CardTitle className="text-white">Quick Actions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-3 cursor-pointer hover:bg-gray-700 p-2 rounded" onClick={() => window.location.href = '/#platforms'}>
               <div className="w-2 h-2 bg-cyan-400 rounded-full"></div>
               <div className="flex-1">
                 <p className="text-sm text-white">Create a new platform profile</p>
                 <p className="text-xs text-gray-400">Start tracking bugs on a new platform</p>
               </div>
             </div>
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-3 cursor-pointer hover:bg-gray-700 p-2 rounded" onClick={() => window.location.href = '/#my-bugs'}>
               <div className="w-2 h-2 bg-green-400 rounded-full"></div>
               <div className="flex-1">
                 <p className="text-sm text-white">Add a new bug report</p>
                 <p className="text-xs text-gray-400">Document your latest findings</p>
               </div>
             </div>
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-3 cursor-pointer hover:bg-gray-700 p-2 rounded" onClick={() => window.location.href = '/#checklists'}>
               <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
               <div className="flex-1">
                 <p className="text-sm text-white">Complete security checklist</p>
