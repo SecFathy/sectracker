@@ -4,8 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Monitor, Smartphone, Computer, CheckSquare } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { ArrowLeft, Monitor, Smartphone, Computer, CheckSquare, Plus, Edit, Trash2, Save, X } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface ChecklistItem {
   id: string;
@@ -28,8 +30,13 @@ interface ChecklistDetailViewProps {
 export function ChecklistDetailView({ checklistId, onBack }: ChecklistDetailViewProps) {
   const { theme } = useTheme();
   const isHackerTheme = theme === 'hacker';
+  const { toast } = useToast();
   
   const [checklist, setChecklist] = useState<Checklist | null>(null);
+  const [editingItem, setEditingItem] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
+  const [newItemText, setNewItemText] = useState('');
+  const [showNewItemInput, setShowNewItemInput] = useState(false);
 
   useEffect(() => {
     // Mock data - in real app, fetch from database
@@ -96,6 +103,77 @@ export function ChecklistDetailView({ checklistId, onBack }: ChecklistDetailView
     });
   };
 
+  const startEditingItem = (itemId: string, currentText: string) => {
+    setEditingItem(itemId);
+    setEditText(currentText);
+  };
+
+  const saveEditedItem = (itemId: string) => {
+    if (!checklist || !editText.trim()) return;
+
+    setChecklist({
+      ...checklist,
+      items: checklist.items.map(item =>
+        item.id === itemId ? { ...item, text: editText.trim() } : item
+      )
+    });
+
+    setEditingItem(null);
+    setEditText('');
+    
+    toast({
+      title: "Success",
+      description: "Checklist item updated successfully"
+    });
+  };
+
+  const cancelEditing = () => {
+    setEditingItem(null);
+    setEditText('');
+  };
+
+  const deleteItem = (itemId: string) => {
+    if (!checklist) return;
+
+    setChecklist({
+      ...checklist,
+      items: checklist.items.filter(item => item.id !== itemId)
+    });
+
+    toast({
+      title: "Success",
+      description: "Checklist item deleted successfully"
+    });
+  };
+
+  const addNewItem = () => {
+    if (!checklist || !newItemText.trim()) return;
+
+    const newItem: ChecklistItem = {
+      id: Date.now().toString(),
+      text: newItemText.trim(),
+      completed: false
+    };
+
+    setChecklist({
+      ...checklist,
+      items: [...checklist.items, newItem]
+    });
+
+    setNewItemText('');
+    setShowNewItemInput(false);
+    
+    toast({
+      title: "Success",
+      description: "New checklist item added successfully"
+    });
+  };
+
+  const cancelNewItem = () => {
+    setNewItemText('');
+    setShowNewItemInput(false);
+  };
+
   const getProgress = () => {
     if (!checklist) return 0;
     const completed = checklist.items.filter(item => item.completed).length;
@@ -117,7 +195,7 @@ export function ChecklistDetailView({ checklistId, onBack }: ChecklistDetailView
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center space-x-4">
+      <div className="flex items-center justify-between">
         <Button 
           variant="outline" 
           onClick={onBack}
@@ -125,6 +203,14 @@ export function ChecklistDetailView({ checklistId, onBack }: ChecklistDetailView
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Checklists
+        </Button>
+        
+        <Button
+          onClick={() => setShowNewItemInput(true)}
+          className={isHackerTheme ? "bg-green-600 hover:bg-green-700 text-black font-mono" : "bg-blue-600 hover:bg-blue-700"}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add Item
         </Button>
       </div>
 
@@ -161,18 +247,101 @@ export function ChecklistDetailView({ checklistId, onBack }: ChecklistDetailView
                   onCheckedChange={() => toggleItem(item.id)}
                   className={isHackerTheme ? "data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600" : "data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"}
                 />
-                <label
-                  htmlFor={`${checklist.id}-${item.id}`}
-                  className={`flex-1 cursor-pointer ${
-                    item.completed 
-                      ? isHackerTheme ? 'text-green-600 line-through font-mono' : 'text-gray-400 line-through'
-                      : isHackerTheme ? 'text-green-300 font-mono' : 'text-gray-300'
-                  }`}
-                >
-                  {item.text}
-                </label>
+                
+                {editingItem === item.id ? (
+                  <div className="flex-1 flex items-center space-x-2">
+                    <Input
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      className={`flex-1 ${isHackerTheme ? "bg-green-950 border-green-700 text-green-300 font-mono" : "bg-gray-600 border-gray-500 text-white"}`}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') saveEditedItem(item.id);
+                        if (e.key === 'Escape') cancelEditing();
+                      }}
+                      autoFocus
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => saveEditedItem(item.id)}
+                      className={isHackerTheme ? "bg-green-600 hover:bg-green-700 text-black" : "bg-blue-600 hover:bg-blue-700"}
+                    >
+                      <Save className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={cancelEditing}
+                      className={isHackerTheme ? "border-green-600 text-green-400 hover:bg-green-950/50" : ""}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <label
+                      htmlFor={`${checklist.id}-${item.id}`}
+                      className={`flex-1 cursor-pointer ${
+                        item.completed 
+                          ? isHackerTheme ? 'text-green-600 line-through font-mono' : 'text-gray-400 line-through'
+                          : isHackerTheme ? 'text-green-300 font-mono' : 'text-gray-300'
+                      }`}
+                    >
+                      {item.text}
+                    </label>
+                    <div className="flex space-x-1">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => startEditingItem(item.id, item.text)}
+                        className={`${isHackerTheme ? "text-green-400 hover:text-green-300 hover:bg-green-950/50" : "text-gray-400 hover:text-white hover:bg-gray-700"}`}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => deleteItem(item.id)}
+                        className="text-red-400 hover:text-red-300 hover:bg-gray-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </>
+                )}
               </div>
             ))}
+
+            {showNewItemInput && (
+              <div className={`flex items-center space-x-3 p-3 rounded ${isHackerTheme ? "bg-green-950/20 border border-green-800" : "bg-gray-700/50"}`}>
+                <div className="w-5" /> {/* Spacer for checkbox alignment */}
+                <Input
+                  value={newItemText}
+                  onChange={(e) => setNewItemText(e.target.value)}
+                  placeholder="Enter new checklist item..."
+                  className={`flex-1 ${isHackerTheme ? "bg-green-950 border-green-700 text-green-300 font-mono placeholder:text-green-600" : "bg-gray-600 border-gray-500 text-white placeholder:text-gray-400"}`}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') addNewItem();
+                    if (e.key === 'Escape') cancelNewItem();
+                  }}
+                  autoFocus
+                />
+                <Button
+                  size="sm"
+                  onClick={addNewItem}
+                  className={isHackerTheme ? "bg-green-600 hover:bg-green-700 text-black" : "bg-blue-600 hover:bg-blue-700"}
+                >
+                  <Save className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={cancelNewItem}
+                  className={isHackerTheme ? "border-green-600 text-green-400 hover:bg-green-950/50" : ""}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
