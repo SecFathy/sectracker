@@ -18,6 +18,17 @@ import { AuthWrapper } from '@/components/AuthWrapper';
 const Index = () => {
   const [activeView, setActiveView] = React.useState('dashboard');
 
+  React.useEffect(() => {
+    const handleNavigate = (event: CustomEvent) => {
+      setActiveView(event.detail);
+    };
+
+    window.addEventListener('navigate', handleNavigate as EventListener);
+    return () => {
+      window.removeEventListener('navigate', handleNavigate as EventListener);
+    };
+  }, []);
+
   const renderView = () => {
     switch (activeView) {
       case 'dashboard':

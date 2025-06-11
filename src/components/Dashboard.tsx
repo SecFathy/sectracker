@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Bug, Shield, CheckSquare, Lightbulb, Target, Trophy } from 'lucide-react';
@@ -18,6 +17,7 @@ interface DashboardStats {
   readingItems: number;
   activeBountyTargets: number;
   totalBountyTarget: number;
+  currentBountyProgress: number;
   severityStats: {
     Critical: number;
     High: number;
@@ -46,6 +46,7 @@ export function Dashboard() {
     readingItems: 0,
     activeBountyTargets: 0,
     totalBountyTarget: 0,
+    currentBountyProgress: 0,
     severityStats: {
       Critical: 0,
       High: 0,
@@ -148,11 +149,12 @@ export function Dashboard() {
       // Fetch bounty targets stats
       const { data: bountyTargets } = await supabase
         .from('bounty_targets')
-        .select('target_amount, is_active')
+        .select('target_amount, current_amount, is_active')
         .eq('user_id', userId);
 
       const activeBountyTargets = bountyTargets?.filter(target => target.is_active).length || 0;
       const totalBountyTarget = bountyTargets?.reduce((sum, target) => sum + (target.target_amount || 0), 0) || 0;
+      const currentBountyProgress = bountyTargets?.reduce((sum, target) => sum + (target.current_amount || 0), 0) || 0;
 
       // Fetch other stats
       const { count: checklistsCount } = await supabase
@@ -179,6 +181,7 @@ export function Dashboard() {
         readingItems: readingCount || 0,
         activeBountyTargets,
         totalBountyTarget,
+        currentBountyProgress,
         severityStats,
       });
     } catch (error: any) {
@@ -263,7 +266,11 @@ export function Dashboard() {
           <h1 className="text-3xl font-bold text-white">Dashboard</h1>
           {stats.activeBountyTargets > 0 && (
             <div className="text-sm text-gray-400 mt-1">
-              Active Bounty Targets: {stats.activeBountyTargets} (${stats.totalBountyTarget.toFixed(2)} total)
+              Active Bounty Targets: {stats.activeBountyTargets} | 
+              Progress: ${stats.currentBountyProgress.toFixed(2)} / ${stats.totalBountyTarget.toFixed(2)}
+              {stats.totalBountyTarget > 0 && 
+                ` (${((stats.currentBountyProgress / stats.totalBountyTarget) * 100).toFixed(1)}%)`
+              }
             </div>
           )}
         </div>
@@ -299,21 +306,30 @@ export function Dashboard() {
             <CardTitle className="text-white">Quick Actions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center space-x-3 cursor-pointer hover:bg-gray-700 p-2 rounded" onClick={() => window.location.href = '/#platforms'}>
+            <div className="flex items-center space-x-3 cursor-pointer hover:bg-gray-700 p-2 rounded" onClick={() => {
+              const event = new CustomEvent('navigate', { detail: 'platforms' });
+              window.dispatchEvent(event);
+            }}>
               <div className="w-2 h-2 bg-cyan-400 rounded-full"></div>
               <div className="flex-1">
                 <p className="text-sm text-white">Create a new platform profile</p>
                 <p className="text-xs text-gray-400">Start tracking bugs on a new platform</p>
               </div>
             </div>
-            <div className="flex items-center space-x-3 cursor-pointer hover:bg-gray-700 p-2 rounded" onClick={() => window.location.href = '/#my-bugs'}>
+            <div className="flex items-center space-x-3 cursor-pointer hover:bg-gray-700 p-2 rounded" onClick={() => {
+              const event = new CustomEvent('navigate', { detail: 'my-bugs' });
+              window.dispatchEvent(event);
+            }}>
               <div className="w-2 h-2 bg-green-400 rounded-full"></div>
               <div className="flex-1">
                 <p className="text-sm text-white">Add a new bug report</p>
                 <p className="text-xs text-gray-400">Document your latest findings</p>
               </div>
             </div>
-            <div className="flex items-center space-x-3 cursor-pointer hover:bg-gray-700 p-2 rounded" onClick={() => window.location.href = '/#checklists'}>
+            <div className="flex items-center space-x-3 cursor-pointer hover:bg-gray-700 p-2 rounded" onClick={() => {
+              const event = new CustomEvent('navigate', { detail: 'checklists' });
+              window.dispatchEvent(event);
+            }}>
               <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
               <div className="flex-1">
                 <p className="text-sm text-white">Complete security checklist</p>
