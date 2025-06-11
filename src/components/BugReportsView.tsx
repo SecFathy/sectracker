@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -81,8 +80,8 @@ export function BugReportsView() {
   const filteredReports = reports.filter(report => {
     const matchesSearch = report.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          report.program.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesProgram = !filterProgram || report.program === filterProgram;
-    const matchesStatus = !filterStatus || report.status === filterStatus;
+    const matchesProgram = !filterProgram || filterProgram === 'all' || report.program === filterProgram;
+    const matchesStatus = !filterStatus || filterStatus === 'all' || report.status === filterStatus;
     
     return matchesSearch && matchesProgram && matchesStatus;
   });
@@ -106,6 +105,11 @@ export function BugReportsView() {
 
   const handleDeleteReport = (reportId: string) => {
     setReports(reports.filter(r => r.id !== reportId));
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingReport(null);
   };
 
   return (
@@ -250,10 +254,7 @@ export function BugReportsView() {
 
       <BugReportModal
         isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setEditingReport(null);
-        }}
+        onClose={handleCloseModal}
         onSave={handleSaveReport}
         editingReport={editingReport}
       />
