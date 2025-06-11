@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Filter, Bug, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, Filter, Bug, Edit, Trash2, Eye } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { BugReportModal } from './BugReportModal';
+import { BugDetailsModal } from './BugDetailsModal';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -23,6 +24,17 @@ interface BugReport {
   program_id?: string;
   vulnerability_type?: string;
   description?: string;
+  poc_steps?: string;
+  impact_description?: string;
+  remediation_suggestion?: string;
+  submission_date?: string;
+  programs?: {
+    name: string;
+    company: string;
+    platforms?: {
+      name: string;
+    };
+  };
 }
 
 export function BugReportsView() {
@@ -32,7 +44,9 @@ export function BugReportsView() {
   
   const [reports, setReports] = useState<BugReport[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [editingReport, setEditingReport] = useState<BugReport | null>(null);
+  const [viewingReport, setViewingReport] = useState<BugReport | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterProgram, setFilterProgram] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
@@ -87,7 +101,12 @@ export function BugReportsView() {
         bounty_amount: bug.bounty_amount,
         program_id: bug.program_id,
         vulnerability_type: bug.vulnerability_type,
-        description: bug.description
+        description: bug.description,
+        poc_steps: bug.poc_steps,
+        impact_description: bug.impact_description,
+        remediation_suggestion: bug.remediation_suggestion,
+        submission_date: bug.submission_date,
+        programs: bug.programs
       })) || [];
 
       setReports(formattedReports);
@@ -143,6 +162,11 @@ export function BugReportsView() {
     setEditingReport(null);
   };
 
+  const handleViewReport = (report: BugReport) => {
+    setViewingReport(report);
+    setIsDetailsModalOpen(true);
+  };
+
   const handleEditReport = (report: BugReport) => {
     setEditingReport(report);
     setIsModalOpen(true);
@@ -183,6 +207,11 @@ export function BugReportsView() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingReport(null);
+  };
+
+  const handleCloseDetailsModal = () => {
+    setIsDetailsModalOpen(false);
+    setViewingReport(null);
   };
 
   if (loading) {
@@ -306,6 +335,14 @@ export function BugReportsView() {
                     <Button 
                       size="sm" 
                       variant="outline"
+                      onClick={() => handleViewReport(report)}
+                      className={isHackerTheme ? "border-green-600 text-green-400 hover:bg-green-950" : "border-gray-600 text-gray-300 hover:bg-gray-700"}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
                       onClick={() => handleEditReport(report)}
                       className={isHackerTheme ? "border-green-600 text-green-400 hover:bg-green-950" : "border-gray-600 text-gray-300 hover:bg-gray-700"}
                     >
@@ -346,6 +383,12 @@ export function BugReportsView() {
         onClose={handleCloseModal}
         onSave={handleSaveReport}
         editingReport={editingReport}
+      />
+
+      <BugDetailsModal
+        bug={viewingReport}
+        isOpen={isDetailsModalOpen}
+        onClose={handleCloseDetailsModal}
       />
     </div>
   );
