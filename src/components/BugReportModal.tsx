@@ -52,9 +52,12 @@ export function BugReportModal({ isOpen, onClose, onSave, editingReport }: BugRe
 
   useEffect(() => {
     if (isOpen) {
+      console.log('Modal opened, fetching data...');
       fetchPlatforms();
       fetchPrograms();
+      
       if (editingReport) {
+        console.log('Editing report:', editingReport);
         setFormData({
           program_id: editingReport.program_id || '',
           title: editingReport.title || '',
@@ -68,15 +71,8 @@ export function BugReportModal({ isOpen, onClose, onSave, editingReport }: BugRe
           bounty_amount: editingReport.bounty_amount || 0,
           submission_date: editingReport.submission_date || '',
         });
-        
-        // If editing, find the platform for the selected program
-        if (editingReport.program_id && programs.length > 0) {
-          const program = programs.find(p => p.id === editingReport.program_id);
-          if (program) {
-            setSelectedPlatform(program.platform_id);
-          }
-        }
       } else {
+        console.log('Creating new report, resetting form...');
         setFormData({
           program_id: '',
           title: '',
@@ -93,28 +89,46 @@ export function BugReportModal({ isOpen, onClose, onSave, editingReport }: BugRe
         setSelectedPlatform('');
       }
     }
-  }, [isOpen, editingReport, programs]);
+  }, [isOpen, editingReport]);
 
+  // Separate useEffect for setting selected platform when editing
   useEffect(() => {
-    // Filter programs based on selected platform
-    if (selectedPlatform) {
-      const filtered = programs.filter(program => program.platform_id === selectedPlatform);
-      setFilteredPrograms(filtered);
-    } else {
-      setFilteredPrograms(programs);
-    }
-    
-    // Reset program selection if it doesn't match the selected platform
-    if (selectedPlatform && formData.program_id) {
-      const program = programs.find(p => p.id === formData.program_id);
-      if (program && program.platform_id !== selectedPlatform) {
-        setFormData(prev => ({ ...prev, program_id: '' }));
+    if (editingReport && editingReport.program_id && programs.length > 0) {
+      console.log('Finding platform for edited report...');
+      const program = programs.find(p => p.id === editingReport.program_id);
+      if (program) {
+        console.log('Found program:', program, 'Setting platform to:', program.platform_id);
+        setSelectedPlatform(program.platform_id);
       }
+    }
+  }, [editingReport, programs]);
+
+  // Handle platform selection and program filtering
+  useEffect(() => {
+    console.log('Platform or programs changed. Selected platform:', selectedPlatform, 'Programs count:', programs.length);
+    
+    if (selectedPlatform && programs.length > 0) {
+      const filtered = programs.filter(program => program.platform_id === selectedPlatform);
+      console.log('Filtered programs for platform', selectedPlatform, ':', filtered);
+      setFilteredPrograms(filtered);
+      
+      // Reset program selection if current program doesn't belong to selected platform
+      if (formData.program_id) {
+        const currentProgram = programs.find(p => p.id === formData.program_id);
+        if (currentProgram && currentProgram.platform_id !== selectedPlatform) {
+          console.log('Resetting program selection - current program not in selected platform');
+          setFormData(prev => ({ ...prev, program_id: '' }));
+        }
+      }
+    } else {
+      console.log('No platform selected or no programs, showing all programs');
+      setFilteredPrograms(programs);
     }
   }, [selectedPlatform, programs, formData.program_id]);
 
   const fetchPlatforms = async () => {
     try {
+      console.log('Fetching platforms...');
       const { data, error } = await supabase
         .from('platforms')
         .select('id, name')
@@ -122,6 +136,7 @@ export function BugReportModal({ isOpen, onClose, onSave, editingReport }: BugRe
         .order('name');
 
       if (error) throw error;
+      console.log('Platforms fetched:', data);
       setPlatforms(data || []);
     } catch (error: any) {
       console.error('Error fetching platforms:', error);
@@ -135,6 +150,7 @@ export function BugReportModal({ isOpen, onClose, onSave, editingReport }: BugRe
 
   const fetchPrograms = async () => {
     try {
+      console.log('Fetching programs...');
       const { data, error } = await supabase
         .from('programs')
         .select(`
@@ -148,6 +164,7 @@ export function BugReportModal({ isOpen, onClose, onSave, editingReport }: BugRe
         .order('company');
 
       if (error) throw error;
+      console.log('Programs fetched:', data);
       setPrograms(data || []);
     } catch (error: any) {
       console.error('Error fetching programs:', error);
@@ -159,11 +176,24 @@ export function BugReportModal({ isOpen, onClose, onSave, editingReport }: BugRe
     }
   };
 
+  const handlePlatformChange = (platformId: string) => {
+    console.log('Platform changed to:', platformId);
+    setSelectedPlatform(platformId);
+    // Reset program selection when platform changes
+    setFormData(prev => ({ ...prev, program_id: '' }));
+  };
+
+  const handleProgramChange = (programId: string) => {
+    console.log('Program changed to:', programId);
+    setFormData(prev => ({ ...prev, program_id: programId }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      console.log('Submitting form data:', formData);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
@@ -173,6 +203,8 @@ export function BugReportModal({ isOpen, onClose, onSave, editingReport }: BugRe
         program_id: formData.program_id || null,
         submission_date: formData.submission_date || null,
       };
+
+      console.log('Bug data to save:', bugData);
 
       if (editingReport) {
         const { error } = await supabase
@@ -202,6 +234,7 @@ export function BugReportModal({ isOpen, onClose, onSave, editingReport }: BugRe
       onSave();
       onClose();
     } catch (error: any) {
+      console.error('Error saving bug report:', error);
       toast({
         title: "Error",
         description: error.message,
@@ -222,7 +255,7 @@ export function BugReportModal({ isOpen, onClose, onSave, editingReport }: BugRe
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="platform">Platform</Label>
-              <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
+              <Select value={selectedPlatform} onValueChange={handlePlatformChange}>
                 <SelectTrigger className="bg-gray-700 border-gray-600">
                   <SelectValue placeholder="Select a platform first" />
                 </SelectTrigger>
@@ -240,7 +273,7 @@ export function BugReportModal({ isOpen, onClose, onSave, editingReport }: BugRe
               <Label htmlFor="program">Program</Label>
               <Select 
                 value={formData.program_id} 
-                onValueChange={(value) => setFormData({...formData, program_id: value})}
+                onValueChange={handleProgramChange}
                 disabled={!selectedPlatform}
               >
                 <SelectTrigger className="bg-gray-700 border-gray-600">
