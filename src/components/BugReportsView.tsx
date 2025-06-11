@@ -141,7 +141,7 @@ export function BugReportsView() {
                 <SelectValue placeholder="All Programs" />
               </SelectTrigger>
               <SelectContent className={isHackerTheme ? "bg-black border-green-600 text-green-400 font-mono" : "bg-gray-700 border-gray-600"}>
-                <SelectItem value="">All Programs</SelectItem>
+                <SelectItem value="all">All Programs</SelectItem>
                 {uniquePrograms.map(program => (
                   <SelectItem key={program} value={program}>{program}</SelectItem>
                 ))}
@@ -152,7 +152,7 @@ export function BugReportsView() {
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
               <SelectContent className={isHackerTheme ? "bg-black border-green-600 text-green-400 font-mono" : "bg-gray-700 border-gray-600"}>
-                <SelectItem value="">All Statuses</SelectItem>
+                <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="Draft">Draft</SelectItem>
                 <SelectItem value="Submitted">Submitted</SelectItem>
                 <SelectItem value="Accepted">Accepted</SelectItem>

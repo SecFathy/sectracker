@@ -153,10 +153,7 @@ export function ChecklistsView() {
                       <Checkbox
                         id={`${checklist.id}-${item.id}`}
                         checked={item.completed}
-                        onCheckedChange={(e) => {
-                          e.preventDefault();
-                          toggleItem(checklist.id, item.id);
-                        }}
+                        onCheckedChange={() => toggleItem(checklist.id, item.id)}
                         onClick={(e) => e.stopPropagation()}
                         className={isHackerTheme ? "data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600" : "data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"}
                       />
