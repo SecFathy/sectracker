@@ -10,6 +10,8 @@ import { PersonalNotesView } from '@/components/PersonalNotesView';
 import { UsefulLinksView } from '@/components/UsefulLinksView';
 import { ProfileView } from '@/components/ProfileView';
 import { RSSView } from '@/components/RSSView';
+import { BugReportsView } from '@/components/BugReportsView';
+import { BountyTargetsView } from '@/components/BountyTargetsView';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { AuthWrapper } from '@/components/AuthWrapper';
 
@@ -22,6 +24,10 @@ const Index = () => {
         return <Dashboard />;
       case 'platforms':
         return <PlatformsView />;
+      case 'my-bugs':
+        return <BugReportsView />;
+      case 'bounty-targets':
+        return <BountyTargetsView />;
       case 'checklists':
         return <ChecklistsView />;
       case 'tips':

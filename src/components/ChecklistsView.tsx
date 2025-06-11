@@ -1,9 +1,12 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Plus, CheckSquare, Monitor, Smartphone, Computer } from 'lucide-react';
+import { useTheme } from '@/contexts/ThemeContext';
+import { ChecklistDetailView } from './ChecklistDetailView';
 
 interface ChecklistItem {
   id: string;
@@ -19,6 +22,10 @@ interface Checklist {
 }
 
 export function ChecklistsView() {
+  const { theme } = useTheme();
+  const isHackerTheme = theme === 'hacker';
+  
+  const [selectedChecklistId, setSelectedChecklistId] = useState<string | null>(null);
   const [checklists, setChecklists] = useState<Checklist[]>([
     {
       id: '1',
@@ -49,6 +56,15 @@ export function ChecklistsView() {
     }
   ]);
 
+  if (selectedChecklistId) {
+    return (
+      <ChecklistDetailView 
+        checklistId={selectedChecklistId} 
+        onBack={() => setSelectedChecklistId(null)} 
+      />
+    );
+  }
+
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'web': return Monitor;
@@ -60,10 +76,10 @@ export function ChecklistsView() {
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'web': return 'bg-blue-600';
-      case 'mobile': return 'bg-green-600';
-      case 'desktop': return 'bg-purple-600';
-      default: return 'bg-gray-600';
+      case 'web': return isHackerTheme ? 'bg-blue-900 text-blue-300' : 'bg-blue-600';
+      case 'mobile': return isHackerTheme ? 'bg-green-900 text-green-300' : 'bg-green-600';
+      case 'desktop': return isHackerTheme ? 'bg-purple-900 text-purple-300' : 'bg-purple-600';
+      default: return isHackerTheme ? 'bg-gray-900 text-gray-300' : 'bg-gray-600';
     }
   };
 
@@ -88,8 +104,10 @@ export function ChecklistsView() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-white">Security Checklists</h1>
-        <Button className="bg-blue-600 hover:bg-blue-700">
+        <h1 className={`text-3xl font-bold ${isHackerTheme ? "text-green-400 font-mono" : "text-white"}`}>
+          Security Checklists
+        </h1>
+        <Button className={isHackerTheme ? "bg-green-600 hover:bg-green-700 text-black font-mono" : "bg-blue-600 hover:bg-blue-700"}>
           <Plus className="h-4 w-4 mr-2" />
           Add Checklist
         </Button>
@@ -101,11 +119,15 @@ export function ChecklistsView() {
           const progress = getProgress(checklist);
           
           return (
-            <Card key={checklist.id} className="bg-gray-800 border-gray-700">
+            <Card 
+              key={checklist.id} 
+              className={`cursor-pointer transition-all hover:scale-105 ${isHackerTheme ? "bg-black border-green-600 hover:border-green-400" : "bg-gray-800 border-gray-700 hover:border-gray-500"}`}
+              onClick={() => setSelectedChecklistId(checklist.id)}
+            >
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-white flex items-center space-x-2">
-                    <IconComponent className="h-5 w-5 text-blue-400" />
+                  <CardTitle className={`flex items-center space-x-2 ${isHackerTheme ? "text-green-400 font-mono" : "text-white"}`}>
+                    <IconComponent className={`h-5 w-5 ${isHackerTheme ? "text-green-400" : "text-blue-400"}`} />
                     <span>{checklist.name}</span>
                   </CardTitle>
                   <Badge className={`${getTypeColor(checklist.type)} text-white`}>
@@ -113,37 +135,49 @@ export function ChecklistsView() {
                   </Badge>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <div className="flex-1 bg-gray-700 rounded-full h-2">
+                  <div className={`flex-1 ${isHackerTheme ? "bg-green-950" : "bg-gray-700"} rounded-full h-2`}>
                     <div 
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      className={`${isHackerTheme ? "bg-green-600" : "bg-blue-600"} h-2 rounded-full transition-all duration-300`}
                       style={{ width: `${progress}%` }}
                     />
                   </div>
-                  <span className="text-sm text-gray-400">{progress}%</span>
+                  <span className={`text-sm ${isHackerTheme ? "text-green-400 font-mono" : "text-gray-400"}`}>
+                    {progress}%
+                  </span>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {checklist.items.map((item) => (
+                  {checklist.items.slice(0, 3).map((item) => (
                     <div key={item.id} className="flex items-center space-x-3">
                       <Checkbox
                         id={`${checklist.id}-${item.id}`}
                         checked={item.completed}
-                        onCheckedChange={() => toggleItem(checklist.id, item.id)}
-                        className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                        onCheckedChange={(e) => {
+                          e.preventDefault();
+                          toggleItem(checklist.id, item.id);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        className={isHackerTheme ? "data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600" : "data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"}
                       />
                       <label
                         htmlFor={`${checklist.id}-${item.id}`}
                         className={`flex-1 text-sm cursor-pointer ${
                           item.completed 
-                            ? 'text-gray-400 line-through' 
-                            : 'text-gray-300'
+                            ? isHackerTheme ? 'text-green-600 line-through font-mono' : 'text-gray-400 line-through'
+                            : isHackerTheme ? 'text-green-300 font-mono' : 'text-gray-300'
                         }`}
+                        onClick={(e) => e.stopPropagation()}
                       >
                         {item.text}
                       </label>
                     </div>
                   ))}
+                  {checklist.items.length > 3 && (
+                    <p className={`text-sm ${isHackerTheme ? "text-green-500 font-mono" : "text-gray-500"}`}>
+                      +{checklist.items.length - 3} more items...
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>

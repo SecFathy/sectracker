@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Shield, Bug, CheckSquare, Lightbulb, BookOpen, BarChart3, LogOut, FileText, Link, User, Rss } from 'lucide-react';
+import { Shield, Bug, CheckSquare, Lightbulb, BookOpen, BarChart3, LogOut, FileText, Link, User, Rss, Target } from 'lucide-react';
 import { Sidebar as SidebarUI, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,6 +13,8 @@ interface SidebarProps {
 const menuItems = [
   { id: 'dashboard', title: 'Dashboard', icon: BarChart3, color: 'text-cyan-400' },
   { id: 'platforms', title: 'Platforms & Bugs', icon: Bug, color: 'text-red-400' },
+  { id: 'my-bugs', title: 'My Bug Reports', icon: Bug, color: 'text-red-400' },
+  { id: 'bounty-targets', title: 'Bounty Targets', icon: Target, color: 'text-green-400' },
   { id: 'checklists', title: 'Security Checklists', icon: CheckSquare, color: 'text-green-400' },
   { id: 'tips', title: 'Tips & Tricks', icon: Lightbulb, color: 'text-yellow-400' },
   { id: 'reading', title: 'Reading List', icon: BookOpen, color: 'text-blue-400' },
