@@ -271,10 +271,13 @@ export type Database = {
           created_at: string | null
           id: string
           is_active: boolean | null
+          logo_url: string | null
+          management_type: string | null
           max_bounty: number | null
           min_bounty: number | null
           name: string
           platform_id: string | null
+          program_type: string | null
           program_url: string | null
           scope: string
           updated_at: string | null
@@ -284,10 +287,13 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          logo_url?: string | null
+          management_type?: string | null
           max_bounty?: number | null
           min_bounty?: number | null
           name: string
           platform_id?: string | null
+          program_type?: string | null
           program_url?: string | null
           scope: string
           updated_at?: string | null
@@ -297,10 +303,13 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          logo_url?: string | null
+          management_type?: string | null
           max_bounty?: number | null
           min_bounty?: number | null
           name?: string
           platform_id?: string | null
+          program_type?: string | null
           program_url?: string | null
           scope?: string
           updated_at?: string | null

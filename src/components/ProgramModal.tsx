@@ -30,6 +30,9 @@ export function ProgramModal({ isOpen, onClose, platforms, onSave }: ProgramModa
     max_bounty: 0,
     min_bounty: 0,
     program_url: '',
+    logo_url: '',
+    program_type: 'Public Bug Bounty Programs',
+    management_type: 'Not Managed',
   });
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -47,7 +50,7 @@ export function ProgramModal({ isOpen, onClose, platforms, onSave }: ProgramModa
 
       toast({
         title: "Success",
-        description: "Program created successfully!",
+        description: "Bug Bounty Program created successfully!",
       });
 
       setFormData({
@@ -58,6 +61,9 @@ export function ProgramModal({ isOpen, onClose, platforms, onSave }: ProgramModa
         max_bounty: 0,
         min_bounty: 0,
         program_url: '',
+        logo_url: '',
+        program_type: 'Public Bug Bounty Programs',
+        management_type: 'Not Managed',
       });
       onSave();
       onClose();
@@ -74,7 +80,7 @@ export function ProgramModal({ isOpen, onClose, platforms, onSave }: ProgramModa
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-2xl">
+      <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add Bug Bounty Program</DialogTitle>
         </DialogHeader>
@@ -116,6 +122,47 @@ export function ProgramModal({ isOpen, onClose, platforms, onSave }: ProgramModa
                 className="bg-gray-700 border-gray-600"
                 required
               />
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="logo_url">Program Logo URL</Label>
+            <Input
+              id="logo_url"
+              type="url"
+              value={formData.logo_url}
+              onChange={(e) => setFormData({...formData, logo_url: e.target.value})}
+              className="bg-gray-700 border-gray-600"
+              placeholder="https://example.com/logo.png"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="program_type">Program Type</Label>
+              <Select value={formData.program_type} onValueChange={(value) => setFormData({...formData, program_type: value})}>
+                <SelectTrigger className="bg-gray-700 border-gray-600">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-700 border-gray-600">
+                  <SelectItem value="Public Bug Bounty Programs">Public Bug Bounty Programs</SelectItem>
+                  <SelectItem value="Private">Private</SelectItem>
+                  <SelectItem value="VDP">VDP</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="management_type">Management Type</Label>
+              <Select value={formData.management_type} onValueChange={(value) => setFormData({...formData, management_type: value})}>
+                <SelectTrigger className="bg-gray-700 border-gray-600">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-700 border-gray-600">
+                  <SelectItem value="Managed">Managed</SelectItem>
+                  <SelectItem value="Not Managed">Not Managed</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
