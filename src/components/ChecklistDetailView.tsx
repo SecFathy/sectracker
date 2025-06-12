@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,6 +27,37 @@ interface ChecklistDetailViewProps {
   onBack: () => void;
 }
 
+// Mock data - same as used in ChecklistsView
+const getMockChecklists = (): Checklist[] => [
+  {
+    id: '1',
+    name: 'Web Application Security',
+    type: 'web',
+    items: [
+      { id: '1', text: '**SQL Injection Testing**\n\nTest for SQL injection vulnerabilities in all input fields and parameters.', completed: true },
+      { id: '2', text: '**Cross-Site Scripting (XSS)**\n\n- Test for Reflected XSS\n- Test for Stored XSS\n- Test for DOM-based XSS', completed: true },
+      { id: '3', text: 'Test for CSRF vulnerabilities', completed: false },
+      { id: '4', text: 'Check for insecure direct object references', completed: false },
+      { id: '5', text: 'Test authentication bypass', completed: false },
+      { id: '6', text: 'Check for session management issues', completed: false },
+      { id: '7', text: 'Test for directory traversal', completed: false },
+      { id: '8', text: 'Check for command injection', completed: false }
+    ]
+  },
+  {
+    id: '2',
+    name: 'Mobile Application Security',
+    type: 'mobile',
+    items: [
+      { id: '1', text: 'Test for insecure data storage', completed: false },
+      { id: '2', text: 'Check for weak cryptography', completed: false },
+      { id: '3', text: 'Test for insecure communication', completed: false },
+      { id: '4', text: 'Check for improper platform usage', completed: false },
+      { id: '5', text: 'Test for reverse engineering protection', completed: false }
+    ]
+  }
+];
+
 export function ChecklistDetailView({ checklistId, onBack }: ChecklistDetailViewProps) {
   const { theme } = useTheme();
   const isHackerTheme = theme === 'hacker';
@@ -36,41 +66,25 @@ export function ChecklistDetailView({ checklistId, onBack }: ChecklistDetailView
   const [checklist, setChecklist] = useState<Checklist | null>(null);
   const [editingItem, setEditingItem] = useState<{ id: string; text: string } | null>(null);
   const [showNewItemEditor, setShowNewItemEditor] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Mock data - in real app, fetch from database
-    const mockChecklists: Checklist[] = [
-      {
-        id: '1',
-        name: 'Web Application Security',
-        type: 'web',
-        items: [
-          { id: '1', text: '**SQL Injection Testing**\n\nTest for SQL injection vulnerabilities in all input fields and parameters.', completed: true },
-          { id: '2', text: '**Cross-Site Scripting (XSS)**\n\n- Test for Reflected XSS\n- Test for Stored XSS\n- Test for DOM-based XSS', completed: true },
-          { id: '3', text: 'Test for CSRF vulnerabilities', completed: false },
-          { id: '4', text: 'Check for insecure direct object references', completed: false },
-          { id: '5', text: 'Test authentication bypass', completed: false },
-          { id: '6', text: 'Check for session management issues', completed: false },
-          { id: '7', text: 'Test for directory traversal', completed: false },
-          { id: '8', text: 'Check for command injection', completed: false }
-        ]
-      },
-      {
-        id: '2',
-        name: 'Mobile Application Security',
-        type: 'mobile',
-        items: [
-          { id: '1', text: 'Test for insecure data storage', completed: false },
-          { id: '2', text: 'Check for weak cryptography', completed: false },
-          { id: '3', text: 'Test for insecure communication', completed: false },
-          { id: '4', text: 'Check for improper platform usage', completed: false },
-          { id: '5', text: 'Test for reverse engineering protection', completed: false }
-        ]
+    const loadChecklist = () => {
+      console.log('Loading checklist with ID:', checklistId);
+      const mockChecklists = getMockChecklists();
+      const found = mockChecklists.find(c => c.id === checklistId);
+      
+      if (found) {
+        console.log('Found checklist:', found);
+        setChecklist(found);
+      } else {
+        console.log('Checklist not found. Available IDs:', mockChecklists.map(c => c.id));
+        setChecklist(null);
       }
-    ];
+      setLoading(false);
+    };
 
-    const found = mockChecklists.find(c => c.id === checklistId);
-    setChecklist(found || null);
+    loadChecklist();
   }, [checklistId]);
 
   const getTypeIcon = (type: string) => {
@@ -166,12 +180,38 @@ export function ChecklistDetailView({ checklistId, onBack }: ChecklistDetailView
     return Math.round((completed / checklist.items.length) * 100);
   };
 
-  if (!checklist) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <p className={isHackerTheme ? "text-green-400 font-mono" : "text-gray-400"}>
-          Checklist not found
+          Loading checklist...
         </p>
+      </div>
+    );
+  }
+
+  if (!checklist) {
+    return (
+      <div className="space-y-6">
+        <Button 
+          variant="outline" 
+          onClick={onBack}
+          className={isHackerTheme ? "border-green-600 text-green-400 hover:bg-green-950/50 font-mono" : ""}
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Checklists
+        </Button>
+        
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <p className={isHackerTheme ? "text-green-400 font-mono text-lg mb-2" : "text-gray-400 text-lg mb-2"}>
+              Checklist not found
+            </p>
+            <p className={isHackerTheme ? "text-green-300 font-mono text-sm" : "text-gray-500 text-sm"}>
+              The requested checklist could not be loaded. Please go back and try again.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
