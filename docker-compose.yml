@@ -2,9 +2,11 @@
 version: '3.8'
 
 services:
+  # PostgreSQL Database
   postgres:
-    image: postgres:15
+    image: postgres:15-alpine
     container_name: sectracker_db
+    restart: unless-stopped
     environment:
       POSTGRES_DB: sectracker
       POSTGRES_USER: sectracker_user
@@ -12,31 +14,90 @@ services:
       POSTGRES_HOST_AUTH_METHOD: trust
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./database/complete_schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/02-data.sql
     ports:
       - "5432:5432"
     networks:
       - sectracker_network
-    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sectracker_user -d sectracker"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # Redis Cache (optional, for session storage and caching)
+  redis:
+    image: redis:7-alpine
+    container_name: sectracker_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - sectracker_network
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # Main Application
   app:
-    build: .
+    build: 
+      context: .
+      dockerfile: Dockerfile
+      target: production
     container_name: sectracker_app
+    restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
+      - NODE_ENV=production
       - VITE_DATABASE_URL=postgresql://sectracker_user:sectracker_password@postgres:5432/sectracker
       - VITE_SUPABASE_URL=http://localhost:3000
       - VITE_SUPABASE_ANON_KEY=offline_mode
+      - REDIS_URL=redis://redis:6379
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - sectracker_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Database Administration Tool (optional)
+  adminer:
+    image: adminer:latest
+    container_name: sectracker_adminer
     restart: unless-stopped
+    ports:
+      - "8080:8080"
+    networks:
+      - sectracker_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
 
 volumes:
   postgres_data:
+    driver: local
+  redis_data:
+    driver: local
 
 networks:
   sectracker_network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

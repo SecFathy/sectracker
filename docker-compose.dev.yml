@@ -1,0 +1,55 @@
+
+version: '3.8'
+
+# Development override for docker-compose
+services:
+  postgres:
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: sectracker_dev
+      POSTGRES_USER: dev_user
+      POSTGRES_PASSWORD: dev_password
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./database/complete_schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/02-data.sql
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: build
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: npm run dev
+    environment:
+      - NODE_ENV=development
+      - VITE_DATABASE_URL=postgresql://dev_user:dev_password@postgres:5432/sectracker_dev
+      - VITE_SUPABASE_URL=http://localhost:3000
+      - VITE_SUPABASE_ANON_KEY=offline_mode
+    ports:
+      - "3000:3000"
+      - "5173:5173"  # Vite dev server
+
+  # Hot reload for development
+  vite-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dependencies
+    volumes:
+      - .:/app
+      - /app/node_modules
+    working_dir: /app
+    command: npm run dev -- --host 0.0.0.0
+    ports:
+      - "5173:5173"
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_dev_data:
