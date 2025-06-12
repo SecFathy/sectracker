@@ -125,7 +125,7 @@ export function ChecklistItemEditor({
                   className={`${isHackerTheme ? "bg-green-950 border-green-600 text-green-300 font-mono" : "bg-gray-700 border-gray-600"} min-h-[200px] font-mono`}
                   rows={8}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && (e.ctrlKey || e.metaCmd)) {
+                    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                       handleSave();
                     } else if (e.key === 'Escape') {
                       handleClose();

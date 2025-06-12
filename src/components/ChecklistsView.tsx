@@ -217,8 +217,8 @@ export function ChecklistsView() {
         <ChecklistEditModal
           isOpen={true}
           onClose={() => setEditingChecklist(null)}
-          onSave={(checklist) => {
-            updateChecklist(checklist);
+          onSave={(updatedChecklist) => {
+            updateChecklist(updatedChecklist);
             setEditingChecklist(null);
           }}
           checklist={editingChecklist}
