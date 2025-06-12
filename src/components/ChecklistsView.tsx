@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -202,8 +201,8 @@ export function ChecklistsView() {
       <ChecklistModal
         isOpen={showChecklistModal}
         onClose={() => setShowChecklistModal(false)}
-        onSave={(checklist) => {
-          createChecklist(checklist);
+        onSave={(checklistData) => {
+          createChecklist(checklistData);
           setShowChecklistModal(false);
         }}
       />
@@ -217,8 +216,14 @@ export function ChecklistsView() {
         <ChecklistEditModal
           isOpen={true}
           onClose={() => setEditingChecklist(null)}
-          onSave={(updatedChecklist) => {
-            updateChecklist(updatedChecklist);
+          onSave={(updatedChecklistData) => {
+            // Ensure we have the items property when updating
+            const checklistWithItems = {
+              ...editingChecklist,
+              ...updatedChecklistData,
+              items: editingChecklist.items || []
+            };
+            updateChecklist(checklistWithItems);
             setEditingChecklist(null);
           }}
           checklist={editingChecklist}
