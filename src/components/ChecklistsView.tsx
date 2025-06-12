@@ -1,13 +1,13 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Plus, CheckSquare, Monitor, Smartphone, Computer } from 'lucide-react';
+import { Plus, CheckSquare, Monitor, Smartphone, Computer, Edit, Trash2 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ChecklistDetailView } from './ChecklistDetailView';
 import { ChecklistModal } from './ChecklistModal';
+import { ChecklistEditModal } from './ChecklistEditModal';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -22,6 +22,7 @@ interface Checklist {
   name: string;
   type: 'web' | 'mobile' | 'desktop' | 'api';
   items: ChecklistItem[];
+  description?: string;
 }
 
 export function ChecklistsView() {
@@ -32,6 +33,7 @@ export function ChecklistsView() {
   const [selectedChecklistId, setSelectedChecklistId] = useState<string | null>(null);
   const [checklists, setChecklists] = useState<Checklist[]>([]);
   const [showChecklistModal, setShowChecklistModal] = useState(false);
+  const [editingChecklist, setEditingChecklist] = useState<Checklist | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -90,6 +92,7 @@ export function ChecklistsView() {
           id: checklist.id,
           name: checklist.name,
           type: checklist.checklist_type as 'web' | 'mobile' | 'desktop' | 'api',
+          description: checklist.description,
           items: [] // Will be populated when we implement checklist items
         }))
       ];
@@ -104,6 +107,26 @@ export function ChecklistsView() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEditChecklist = (checklist: Checklist) => {
+    setChecklists(checklists.map(c => 
+      c.id === checklist.id ? checklist : c
+    ));
+    
+    toast({
+      title: "Success",
+      description: "Checklist updated successfully"
+    });
+  };
+
+  const handleDeleteChecklist = (checklistId: string) => {
+    setChecklists(checklists.filter(c => c.id !== checklistId));
+    
+    toast({
+      title: "Success",
+      description: "Checklist deleted successfully"
+    });
   };
 
   if (selectedChecklistId) {
@@ -183,18 +206,44 @@ export function ChecklistsView() {
           return (
             <Card 
               key={checklist.id} 
-              className={`cursor-pointer transition-all hover:scale-105 ${isHackerTheme ? "bg-black border-green-600 hover:border-green-400" : "bg-gray-800 border-gray-700 hover:border-gray-500"}`}
-              onClick={() => setSelectedChecklistId(checklist.id)}
+              className={`transition-all hover:scale-105 ${isHackerTheme ? "bg-black border-green-600 hover:border-green-400" : "bg-gray-800 border-gray-700 hover:border-gray-500"}`}
             >
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className={`flex items-center space-x-2 ${isHackerTheme ? "text-green-400 font-mono" : "text-white"}`}>
+                  <CardTitle 
+                    className={`flex items-center space-x-2 cursor-pointer ${isHackerTheme ? "text-green-400 font-mono" : "text-white"}`}
+                    onClick={() => setSelectedChecklistId(checklist.id)}
+                  >
                     <IconComponent className={`h-5 w-5 ${isHackerTheme ? "text-green-400" : "text-blue-400"}`} />
                     <span>{checklist.name}</span>
                   </CardTitle>
-                  <Badge className={`${getTypeColor(checklist.type)} text-white`}>
-                    {checklist.type}
-                  </Badge>
+                  <div className="flex items-center space-x-2">
+                    <Badge className={`${getTypeColor(checklist.type)} text-white`}>
+                      {checklist.type}
+                    </Badge>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingChecklist(checklist);
+                      }}
+                      className={`${isHackerTheme ? "text-green-400 hover:text-green-300 hover:bg-green-950/50" : "text-gray-400 hover:text-white hover:bg-gray-700"}`}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteChecklist(checklist.id);
+                      }}
+                      className="text-red-400 hover:text-red-300 hover:bg-gray-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
                 <div className="flex items-center space-x-2">
                   <div className={`flex-1 ${isHackerTheme ? "bg-green-950" : "bg-gray-700"} rounded-full h-2`}>
@@ -208,7 +257,7 @@ export function ChecklistsView() {
                   </span>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent onClick={() => setSelectedChecklistId(checklist.id)} className="cursor-pointer">
                 <div className="space-y-3">
                   {checklist.items.slice(0, 3).map((item) => (
                     <div key={item.id} className="flex items-center space-x-3">
@@ -254,6 +303,15 @@ export function ChecklistsView() {
         onClose={() => setShowChecklistModal(false)}
         onSave={fetchChecklists}
       />
+
+      {editingChecklist && (
+        <ChecklistEditModal
+          isOpen={true}
+          onClose={() => setEditingChecklist(null)}
+          onSave={handleEditChecklist}
+          checklist={editingChecklist}
+        />
+      )}
     </div>
   );
 }
