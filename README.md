@@ -1,6 +1,9 @@
+
 # SecTracker 🛡️
 
 <div align="center">
+
+![SecTracker Banner](https://i.ibb.co/LhXb1DFy/shot-style-2025-06-12-T14-34-26-093-Z.png)
 
 A Modern Bug Bounty and Security Research Management Platform
 
@@ -9,7 +12,21 @@ A Modern Bug Bounty and Security Research Management Platform
 [![Vite](https://img.shields.io/badge/Vite-B73BFE?style=for-the-badge&logo=vite&logoColor=FFD62E)](https://vitejs.dev/)
 [![Supabase](https://img.shields.io/badge/Supabase-181818?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.io/)
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge)](http://makeapullrequest.com)
+
 </div>
+
+## 📋 Table of Contents
+- [Overview](#-overview)
+- [Features](#-features)
+- [Tech Stack](#-tech-stack)
+- [Getting Started](#-getting-started)
+- [Configuration](#-configuration-options)
+- [Development](#-development)
+- [Contributing](#-contributing)
+- [License](#-license)
+- [Acknowledgments](#-acknowledgments)
 
 ## 🎯 Overview
 
@@ -17,58 +34,51 @@ SecTracker is your all-in-one platform for managing bug bounty hunting and secur
 
 ## ✨ Features
 
-- 🎯 **Platform & Program Management**
-  - Organize bug bounty platforms and programs
-  - Track scope and bounty ranges
-  - Manage platform-specific profiles
+### 🎯 Platform & Program Management
+- Organize bug bounty platforms and programs
+- Track scope and bounty ranges
+- Manage platform-specific profiles
 
-- 🐛 **Bug Report Management**
-  - Detailed bug reporting with markdown support
-  - Status tracking from draft to bounty awarded
-  - Severity and impact assessment
+### 🐛 Bug Report Management
+- Detailed bug reporting with markdown support
+- Status tracking from draft to bounty awarded
+- Severity and impact assessment
 
-- 📊 **Dashboard**
-  - Visual overview of your hunting activities
-  - Drag-and-drop customization
-  - Progress tracking and statistics
+### 📊 Dashboard
+- Visual overview of your hunting activities
+- Drag-and-drop customization
+- Progress tracking and statistics
 
-- 📚 **Research Tools**
-  - Integrated RSS feed reader
-  - Reading list management
-  - Personal notes and tips organization
-  - Customizable security checklists
+### 📚 Research Tools
+- Integrated RSS feed reader
+- Reading list management
+- Personal notes and tips organization
+- Customizable security checklists
 
 ## 🛠️ Tech Stack
 
-- **Frontend**
-  - React + TypeScript
-  - Vite for blazing fast builds
-  - Shadcn UI components
-  - TanStack Query for state management
+### Frontend
+- **React + TypeScript** - Modern UI development
+- **Vite** - Blazing fast builds
+- **Shadcn UI** - Beautiful components
+- **TanStack Query** - Efficient state management
 
-- **Backend & Database**
-  - Supabase for backend services
-  - PostgreSQL database
-  - Real-time subscriptions
+### Backend & Database
+- **Supabase** - Backend services
+- **PostgreSQL** - Robust database
+- **Real-time** - Live updates
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-
 - Node.js (v18 or higher)
 - npm or bun package manager
 - PostgreSQL (if using local database)
 
 ### Installation
 
-### 🎉 One-Click Installation (Recommended)
 
-The fastest way to get SecTracker up and running is with our automated installation script:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/SecFathy/sectracker/refs/heads/main/1-click.sh | bash
-```
-
+#### Manual Installation
 
 1. Clone the repository:
 ```bash
@@ -98,13 +108,13 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 DATABASE_URL=postgresql://user:password@localhost:5432/sectracker
 ```
 
-4. Initialize the database:
+4. **Initialize the database:**
 ```bash
 # If using PostgreSQL directly
 psql -U postgres -d sectracker -f database/init.sql
 ```
 
-5. Start the development server:
+5. **Start the development server:**
 ```bash
 npm run dev
 # or
@@ -112,9 +122,6 @@ bun dev
 ```
 
 ### 🐳 Docker Setup
-
-Alternatively, use Docker Compose:
-
 ```bash
 docker-compose up --build
 ```
@@ -122,13 +129,11 @@ docker-compose up --build
 ## 🔧 Configuration Options
 
 ### Supabase Setup
-
 1. Create a new Supabase project
 2. Copy your project URL and anon key
 3. Update `.env` with Supabase credentials
 
 ### Local PostgreSQL Setup
-
 1. Create a new PostgreSQL database
 2. Run the initialization script:
 ```bash
@@ -149,7 +154,6 @@ src/
 ```
 
 ### Available Scripts
-
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build
@@ -177,7 +181,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 <div align="center">
-Built with 💙 for the Security Research Community
+Made with 💙 for the Security Research Community by SecFathy
 </div>
-
-        
