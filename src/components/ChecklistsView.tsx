@@ -60,7 +60,7 @@ export function ChecklistsView() {
   };
 
   const getProgress = (checklist: any) => {
-    if (checklist.items.length === 0) return 0;
+    if (!checklist.items || checklist.items.length === 0) return 0;
     const completed = checklist.items.filter((item: any) => item.completed).length;
     return Math.round((completed / checklist.items.length) * 100);
   };
@@ -161,7 +161,7 @@ export function ChecklistsView() {
               </CardHeader>
               <CardContent onClick={() => setSelectedChecklistId(checklist.id)} className="cursor-pointer">
                 <div className="space-y-3">
-                  {checklist.items.slice(0, 3).map((item: any) => (
+                  {(checklist.items || []).slice(0, 3).map((item: any) => (
                     <div key={item.id} className="flex items-center space-x-3">
                       <Checkbox
                         id={`${checklist.id}-${item.id}`}
@@ -183,12 +183,12 @@ export function ChecklistsView() {
                       </label>
                     </div>
                   ))}
-                  {checklist.items.length > 3 && (
+                  {(checklist.items?.length || 0) > 3 && (
                     <p className={`text-sm ${isHackerTheme ? "text-green-500 font-mono" : "text-gray-500"}`}>
-                      +{checklist.items.length - 3} more items...
+                      +{(checklist.items?.length || 0) - 3} more items...
                     </p>
                   )}
-                  {checklist.items.length === 0 && (
+                  {(!checklist.items || checklist.items.length === 0) && (
                     <p className={`text-sm ${isHackerTheme ? "text-green-500 font-mono" : "text-gray-500"}`}>
                       No items yet. Click to add items.
                     </p>

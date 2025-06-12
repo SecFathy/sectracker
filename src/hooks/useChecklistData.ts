@@ -7,6 +7,7 @@ interface ChecklistItem {
   id: string;
   text: string;
   completed: boolean;
+  order_index?: number;
 }
 
 interface Checklist {
@@ -77,26 +78,45 @@ export function useChecklistData() {
       
       if (user) {
         // If user is authenticated, try to fetch from database
-        const { data: checklistsData, error } = await supabase
+        const { data: checklistsData, error: checklistsError } = await supabase
           .from('security_checklists')
-          .select('*')
+          .select(`
+            id,
+            name,
+            checklist_type,
+            description,
+            checklist_items (
+              id,
+              text,
+              is_completed,
+              order_index
+            )
+          `)
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
 
-        if (error) {
-          console.error('Database error:', error);
+        if (checklistsError) {
+          console.error('Database error:', checklistsError);
           // Fall back to mock data
           setChecklists(mockChecklists);
         } else {
-          // Combine database checklists with mock data for now
+          // Transform database data to match our interface
           const dbChecklists = (checklistsData || []).map(checklist => ({
             id: checklist.id,
             name: checklist.name,
             type: checklist.checklist_type as 'web' | 'mobile' | 'desktop' | 'api',
             description: checklist.description,
-            items: [] // Will be populated when we implement checklist items properly
+            items: (checklist.checklist_items || [])
+              .sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
+              .map(item => ({
+                id: item.id,
+                text: item.text,
+                completed: item.is_completed || false,
+                order_index: item.order_index || 0
+              }))
           }));
           
+          // Combine database checklists with mock data
           setChecklists([...mockChecklists, ...dbChecklists]);
         }
       } else {
@@ -112,14 +132,14 @@ export function useChecklistData() {
     }
   };
 
-  const createChecklist = async (checklist: Omit<Checklist, 'id' | 'items'>) => {
+  const createChecklist = async (checklistData: Omit<Checklist, 'id' | 'items'>) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
         // In offline mode, create with mock ID
         const newChecklist: Checklist = {
-          ...checklist,
+          ...checklistData,
           id: Date.now().toString(),
           items: []
         };
@@ -135,9 +155,9 @@ export function useChecklistData() {
         .from('security_checklists')
         .insert([{
           user_id: user.id,
-          name: checklist.name,
-          checklist_type: checklist.type,
-          description: checklist.description
+          name: checklistData.name,
+          checklist_type: checklistData.type,
+          description: checklistData.description
         }])
         .select()
         .single();
@@ -171,73 +191,215 @@ export function useChecklistData() {
   const updateChecklist = (updatedChecklist: Checklist) => {
     setChecklists(prev => 
       prev.map(checklist => 
-        checklist.id === updatedChecklist.id ? updatedChecklist : checklist
+        checklist.id === updatedChecklist.id ? {
+          ...updatedChecklist,
+          items: updatedChecklist.items || []
+        } : checklist
       )
     );
   };
 
-  const deleteChecklist = (checklistId: string) => {
-    setChecklists(prev => prev.filter(checklist => checklist.id !== checklistId));
-    toast({
-      title: "Success",
-      description: "Checklist deleted successfully"
-    });
+  const deleteChecklist = async (checklistId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        const { error } = await supabase
+          .from('security_checklists')
+          .delete()
+          .eq('id', checklistId)
+          .eq('user_id', user.id);
+
+        if (error) {
+          console.error('Error deleting checklist:', error);
+        }
+      }
+
+      setChecklists(prev => prev.filter(checklist => checklist.id !== checklistId));
+      toast({
+        title: "Success",
+        description: "Checklist deleted successfully"
+      });
+    } catch (error: any) {
+      console.error('Error deleting checklist:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete checklist",
+        variant: "destructive"
+      });
+    }
   };
 
-  const toggleChecklistItem = (checklistId: string, itemId: string) => {
-    setChecklists(prev => 
-      prev.map(checklist => 
-        checklist.id === checklistId 
-          ? {
-              ...checklist,
-              items: checklist.items.map(item =>
-                item.id === itemId ? { ...item, completed: !item.completed } : item
-              )
-            }
-          : checklist
-      )
-    );
+  const toggleChecklistItem = async (checklistId: string, itemId: string) => {
+    try {
+      const checklist = checklists.find(c => c.id === checklistId);
+      const item = checklist?.items.find(i => i.id === itemId);
+      
+      if (!item) return;
+
+      const newCompletedState = !item.completed;
+
+      // Update in database if possible
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { error } = await supabase
+          .from('checklist_items')
+          .update({ is_completed: newCompletedState })
+          .eq('id', itemId);
+
+        if (error) {
+          console.error('Error updating checklist item:', error);
+        }
+      }
+
+      // Update local state
+      setChecklists(prev => 
+        prev.map(checklist => 
+          checklist.id === checklistId 
+            ? {
+                ...checklist,
+                items: checklist.items.map(item =>
+                  item.id === itemId ? { ...item, completed: newCompletedState } : item
+                )
+              }
+            : checklist
+        )
+      );
+    } catch (error: any) {
+      console.error('Error toggling checklist item:', error);
+    }
   };
 
-  const addChecklistItem = (checklistId: string, text: string) => {
-    const newItem: ChecklistItem = {
-      id: Date.now().toString(),
-      text,
-      completed: false
-    };
+  const addChecklistItem = async (checklistId: string, text: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      let newItemId = Date.now().toString();
+      
+      if (user) {
+        const { data, error } = await supabase
+          .from('checklist_items')
+          .insert([{
+            text,
+            checklist_id: checklistId,
+            is_completed: false,
+            order_index: Date.now()
+          }])
+          .select()
+          .single();
 
-    setChecklists(prev => 
-      prev.map(checklist => 
-        checklist.id === checklistId 
-          ? { ...checklist, items: [...checklist.items, newItem] }
-          : checklist
-      )
-    );
+        if (error) {
+          console.error('Error adding checklist item:', error);
+        } else {
+          newItemId = data.id;
+        }
+      }
+
+      const newItem: ChecklistItem = {
+        id: newItemId,
+        text,
+        completed: false
+      };
+
+      setChecklists(prev => 
+        prev.map(checklist => 
+          checklist.id === checklistId 
+            ? { ...checklist, items: [...checklist.items, newItem] }
+            : checklist
+        )
+      );
+
+      toast({
+        title: "Success",
+        description: "Checklist item added successfully"
+      });
+    } catch (error: any) {
+      console.error('Error adding checklist item:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add checklist item",
+        variant: "destructive"
+      });
+    }
   };
 
-  const updateChecklistItem = (checklistId: string, itemId: string, text: string) => {
-    setChecklists(prev => 
-      prev.map(checklist => 
-        checklist.id === checklistId 
-          ? {
-              ...checklist,
-              items: checklist.items.map(item =>
-                item.id === itemId ? { ...item, text } : item
-              )
-            }
-          : checklist
-      )
-    );
+  const updateChecklistItem = async (checklistId: string, itemId: string, text: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        const { error } = await supabase
+          .from('checklist_items')
+          .update({ text })
+          .eq('id', itemId);
+
+        if (error) {
+          console.error('Error updating checklist item:', error);
+        }
+      }
+
+      setChecklists(prev => 
+        prev.map(checklist => 
+          checklist.id === checklistId 
+            ? {
+                ...checklist,
+                items: checklist.items.map(item =>
+                  item.id === itemId ? { ...item, text } : item
+                )
+              }
+            : checklist
+        )
+      );
+
+      toast({
+        title: "Success",
+        description: "Checklist item updated successfully"
+      });
+    } catch (error: any) {
+      console.error('Error updating checklist item:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update checklist item",
+        variant: "destructive"
+      });
+    }
   };
 
-  const deleteChecklistItem = (checklistId: string, itemId: string) => {
-    setChecklists(prev => 
-      prev.map(checklist => 
-        checklist.id === checklistId 
-          ? { ...checklist, items: checklist.items.filter(item => item.id !== itemId) }
-          : checklist
-      )
-    );
+  const deleteChecklistItem = async (checklistId: string, itemId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        const { error } = await supabase
+          .from('checklist_items')
+          .delete()
+          .eq('id', itemId);
+
+        if (error) {
+          console.error('Error deleting checklist item:', error);
+        }
+      }
+
+      setChecklists(prev => 
+        prev.map(checklist => 
+          checklist.id === checklistId 
+            ? { ...checklist, items: checklist.items.filter(item => item.id !== itemId) }
+            : checklist
+        )
+      );
+
+      toast({
+        title: "Success",
+        description: "Checklist item deleted successfully"
+      });
+    } catch (error: any) {
+      console.error('Error deleting checklist item:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete checklist item",
+        variant: "destructive"
+      });
+    }
   };
 
   useEffect(() => {
