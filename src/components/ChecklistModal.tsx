@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -21,6 +23,7 @@ export function ChecklistModal({ isOpen, onClose, onSave }: ChecklistModalProps)
     description: '',
     checklist_type: 'web',
   });
+  const [checklistItems, setChecklistItems] = useState('');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -34,14 +37,34 @@ export function ChecklistModal({ isOpen, onClose, onSave }: ChecklistModalProps)
         throw new Error('User not authenticated');
       }
 
-      const { error } = await supabase
+      // Create the checklist first
+      const { data: checklist, error: checklistError } = await supabase
         .from('security_checklists')
         .insert({
           ...formData,
           user_id: user.id,
-        });
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (checklistError) throw checklistError;
+
+      // Parse markdown items and create checklist items
+      if (checklistItems.trim()) {
+        const lines = checklistItems.split('\n').filter(line => line.trim());
+        const items = lines.map((line, index) => ({
+          text: line.replace(/^[-*+]\s*/, '').trim(), // Remove markdown list markers
+          checklist_id: checklist.id,
+          order_index: index,
+          is_completed: false
+        }));
+
+        const { error: itemsError } = await supabase
+          .from('checklist_items')
+          .insert(items);
+
+        if (itemsError) throw itemsError;
+      }
 
       toast({
         title: "Success",
@@ -53,6 +76,7 @@ export function ChecklistModal({ isOpen, onClose, onSave }: ChecklistModalProps)
         description: '',
         checklist_type: 'web',
       });
+      setChecklistItems('');
       onSave();
       onClose();
     } catch (error: any) {
@@ -68,7 +92,7 @@ export function ChecklistModal({ isOpen, onClose, onSave }: ChecklistModalProps)
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-md">
+      <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add Security Checklist</DialogTitle>
         </DialogHeader>
@@ -108,6 +132,34 @@ export function ChecklistModal({ isOpen, onClose, onSave }: ChecklistModalProps)
               className="bg-gray-700 border-gray-600"
               rows={3}
             />
+          </div>
+
+          <div>
+            <Label>Checklist Items</Label>
+            <Tabs defaultValue="write" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 bg-gray-700">
+                <TabsTrigger value="write" className="data-[state=active]:bg-gray-600">Write</TabsTrigger>
+                <TabsTrigger value="preview" className="data-[state=active]:bg-gray-600">Preview</TabsTrigger>
+              </TabsList>
+              <TabsContent value="write" className="mt-2">
+                <Textarea
+                  value={checklistItems}
+                  onChange={(e) => setChecklistItems(e.target.value)}
+                  placeholder="Enter checklist items (one per line):&#10;- Test for SQL Injection&#10;- Check for XSS vulnerabilities&#10;- Verify authentication mechanisms"
+                  className="bg-gray-700 border-gray-600 min-h-[200px] font-mono"
+                  rows={8}
+                />
+              </TabsContent>
+              <TabsContent value="preview" className="mt-2">
+                <div className="bg-gray-700 border border-gray-600 rounded p-4 min-h-[200px]">
+                  {checklistItems.trim() ? (
+                    <MarkdownRenderer content={checklistItems} />
+                  ) : (
+                    <p className="text-gray-400 italic">Preview will appear here...</p>
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
 
           <div className="flex justify-end space-x-2">
