@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,7 +27,8 @@ export function ChecklistsView() {
     createChecklist,
     updateChecklist,
     deleteChecklist,
-    toggleChecklistItem
+    toggleChecklistItem,
+    refetch
   } = useChecklistData();
 
   if (selectedChecklistId) {
@@ -201,8 +203,8 @@ export function ChecklistsView() {
       <ChecklistModal
         isOpen={showChecklistModal}
         onClose={() => setShowChecklistModal(false)}
-        onSave={(checklistData) => {
-          createChecklist(checklistData);
+        onSave={() => {
+          refetch();
           setShowChecklistModal(false);
         }}
       />
