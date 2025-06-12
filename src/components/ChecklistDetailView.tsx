@@ -159,6 +159,7 @@ export function ChecklistDetailView({ checklistId, onBack }: ChecklistDetailView
                 onSave={handleSaveItem}
                 onCancel={() => setShowAddItem(false)}
                 isHackerTheme={isHackerTheme}
+                isOpen={false}
               />
             </CardContent>
           </Card>
@@ -176,6 +177,7 @@ export function ChecklistDetailView({ checklistId, onBack }: ChecklistDetailView
                   onSave={handleSaveItem}
                   onCancel={() => setEditingItem(null)}
                   isHackerTheme={isHackerTheme}
+                  isOpen={false}
                 />
               ) : (
                 <div className="flex items-start space-x-3">
