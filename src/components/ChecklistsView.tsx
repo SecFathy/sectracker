@@ -1,133 +1,34 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Plus, CheckSquare, Monitor, Smartphone, Computer, Edit, Trash2 } from 'lucide-react';
+import { Plus, CheckSquare, Monitor, Smartphone, Computer, Edit, Trash2, Settings } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ChecklistDetailView } from './ChecklistDetailView';
 import { ChecklistModal } from './ChecklistModal';
 import { ChecklistEditModal } from './ChecklistEditModal';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-
-interface ChecklistItem {
-  id: string;
-  text: string;
-  completed: boolean;
-}
-
-interface Checklist {
-  id: string;
-  name: string;
-  type: 'web' | 'mobile' | 'desktop' | 'api';
-  items: ChecklistItem[];
-  description?: string;
-}
+import { ConfigurationModal } from './ConfigurationModal';
+import { useChecklistData } from '@/hooks/useChecklistData';
 
 export function ChecklistsView() {
   const { theme } = useTheme();
   const isHackerTheme = theme === 'hacker';
-  const { toast } = useToast();
   
   const [selectedChecklistId, setSelectedChecklistId] = useState<string | null>(null);
-  const [checklists, setChecklists] = useState<Checklist[]>([]);
   const [showChecklistModal, setShowChecklistModal] = useState(false);
-  const [editingChecklist, setEditingChecklist] = useState<Checklist | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  const [editingChecklist, setEditingChecklist] = useState<any>(null);
 
-  useEffect(() => {
-    fetchChecklists();
-  }, []);
-
-  const fetchChecklists = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: checklistsData, error: checklistsError } = await supabase
-        .from('security_checklists')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (checklistsError) throw checklistsError;
-
-      // For now, we'll use the existing mock data structure
-      // In a future update, we can fetch the actual checklist items
-      const mockChecklists: Checklist[] = [
-        {
-          id: '1',
-          name: 'Web Application Security',
-          type: 'web',
-          items: [
-            { id: '1', text: 'Test for SQL Injection', completed: true },
-            { id: '2', text: 'Test for XSS (Reflected, Stored, DOM)', completed: true },
-            { id: '3', text: 'Test for CSRF vulnerabilities', completed: false },
-            { id: '4', text: 'Check for insecure direct object references', completed: false },
-            { id: '5', text: 'Test authentication bypass', completed: false },
-            { id: '6', text: 'Check for session management issues', completed: false },
-            { id: '7', text: 'Test for directory traversal', completed: false },
-            { id: '8', text: 'Check for command injection', completed: false }
-          ]
-        },
-        {
-          id: '2',
-          name: 'Mobile Application Security',
-          type: 'mobile',
-          items: [
-            { id: '1', text: 'Test for insecure data storage', completed: false },
-            { id: '2', text: 'Check for weak cryptography', completed: false },
-            { id: '3', text: 'Test for insecure communication', completed: false },
-            { id: '4', text: 'Check for improper platform usage', completed: false },
-            { id: '5', text: 'Test for reverse engineering protection', completed: false }
-          ]
-        }
-      ];
-
-      // Combine database checklists with mock data
-      const combinedChecklists = [
-        ...mockChecklists,
-        ...(checklistsData || []).map(checklist => ({
-          id: checklist.id,
-          name: checklist.name,
-          type: checklist.checklist_type as 'web' | 'mobile' | 'desktop' | 'api',
-          description: checklist.description,
-          items: [] // Will be populated when we implement checklist items
-        }))
-      ];
-
-      setChecklists(combinedChecklists);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to load checklists",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleEditChecklist = (checklist: Checklist) => {
-    setChecklists(checklists.map(c => 
-      c.id === checklist.id ? checklist : c
-    ));
-    
-    toast({
-      title: "Success",
-      description: "Checklist updated successfully"
-    });
-  };
-
-  const handleDeleteChecklist = (checklistId: string) => {
-    setChecklists(checklists.filter(c => c.id !== checklistId));
-    
-    toast({
-      title: "Success",
-      description: "Checklist deleted successfully"
-    });
-  };
+  const {
+    checklists,
+    loading,
+    createChecklist,
+    updateChecklist,
+    deleteChecklist,
+    toggleChecklistItem
+  } = useChecklistData();
 
   if (selectedChecklistId) {
     return (
@@ -152,33 +53,23 @@ export function ChecklistsView() {
       case 'web': return isHackerTheme ? 'bg-blue-900 text-blue-300' : 'bg-blue-600';
       case 'mobile': return isHackerTheme ? 'bg-green-900 text-green-300' : 'bg-green-600';
       case 'desktop': return isHackerTheme ? 'bg-purple-900 text-purple-300' : 'bg-purple-600';
+      case 'api': return isHackerTheme ? 'bg-orange-900 text-orange-300' : 'bg-orange-600';
       default: return isHackerTheme ? 'bg-gray-900 text-gray-300' : 'bg-gray-600';
     }
   };
 
-  const toggleItem = (checklistId: string, itemId: string) => {
-    setChecklists(checklists.map(checklist => 
-      checklist.id === checklistId 
-        ? {
-            ...checklist,
-            items: checklist.items.map(item =>
-              item.id === itemId ? { ...item, completed: !item.completed } : item
-            )
-          }
-        : checklist
-    ));
-  };
-
-  const getProgress = (checklist: Checklist) => {
+  const getProgress = (checklist: any) => {
     if (checklist.items.length === 0) return 0;
-    const completed = checklist.items.filter(item => item.completed).length;
+    const completed = checklist.items.filter((item: any) => item.completed).length;
     return Math.round((completed / checklist.items.length) * 100);
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-white">Loading checklists...</div>
+        <div className={`${isHackerTheme ? "text-green-400 font-mono" : "text-white"}`}>
+          Loading checklists...
+        </div>
       </div>
     );
   }
@@ -189,13 +80,23 @@ export function ChecklistsView() {
         <h1 className={`text-3xl font-bold ${isHackerTheme ? "text-green-400 font-mono" : "text-white"}`}>
           Security Checklists
         </h1>
-        <Button 
-          onClick={() => setShowChecklistModal(true)}
-          className={isHackerTheme ? "bg-green-600 hover:bg-green-700 text-black font-mono" : "bg-blue-600 hover:bg-blue-700"}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Checklist
-        </Button>
+        <div className="flex items-center space-x-2">
+          <Button 
+            onClick={() => setShowConfigModal(true)}
+            variant="outline"
+            className={isHackerTheme ? "border-green-600 text-green-400 hover:bg-green-950/50 font-mono" : "border-gray-600 text-gray-300 hover:bg-gray-700"}
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            Configuration
+          </Button>
+          <Button 
+            onClick={() => setShowChecklistModal(true)}
+            className={isHackerTheme ? "bg-green-600 hover:bg-green-700 text-black font-mono" : "bg-blue-600 hover:bg-blue-700"}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Checklist
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -237,7 +138,7 @@ export function ChecklistsView() {
                       variant="ghost"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDeleteChecklist(checklist.id);
+                        deleteChecklist(checklist.id);
                       }}
                       className="text-red-400 hover:text-red-300 hover:bg-gray-700"
                     >
@@ -259,12 +160,12 @@ export function ChecklistsView() {
               </CardHeader>
               <CardContent onClick={() => setSelectedChecklistId(checklist.id)} className="cursor-pointer">
                 <div className="space-y-3">
-                  {checklist.items.slice(0, 3).map((item) => (
+                  {checklist.items.slice(0, 3).map((item: any) => (
                     <div key={item.id} className="flex items-center space-x-3">
                       <Checkbox
                         id={`${checklist.id}-${item.id}`}
                         checked={item.completed}
-                        onCheckedChange={() => toggleItem(checklist.id, item.id)}
+                        onCheckedChange={() => toggleChecklistItem(checklist.id, item.id)}
                         onClick={(e) => e.stopPropagation()}
                         className={isHackerTheme ? "data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600" : "data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"}
                       />
@@ -277,7 +178,7 @@ export function ChecklistsView() {
                         }`}
                         onClick={(e) => e.stopPropagation()}
                       >
-                        {item.text}
+                        {item.text.split('\n')[0].replace(/\*\*/g, '')}
                       </label>
                     </div>
                   ))}
@@ -301,14 +202,25 @@ export function ChecklistsView() {
       <ChecklistModal
         isOpen={showChecklistModal}
         onClose={() => setShowChecklistModal(false)}
-        onSave={fetchChecklists}
+        onSave={(checklist) => {
+          createChecklist(checklist);
+          setShowChecklistModal(false);
+        }}
+      />
+
+      <ConfigurationModal
+        isOpen={showConfigModal}
+        onClose={() => setShowConfigModal(false)}
       />
 
       {editingChecklist && (
         <ChecklistEditModal
           isOpen={true}
           onClose={() => setEditingChecklist(null)}
-          onSave={handleEditChecklist}
+          onSave={(checklist) => {
+            updateChecklist(checklist);
+            setEditingChecklist(null);
+          }}
           checklist={editingChecklist}
         />
       )}

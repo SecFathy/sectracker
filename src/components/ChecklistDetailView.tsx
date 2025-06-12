@@ -1,91 +1,62 @@
+
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Monitor, Smartphone, Computer, CheckSquare, Plus, Edit, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, Edit, Trash2, CheckSquare, Monitor, Smartphone, Computer } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
-import { useToast } from '@/hooks/use-toast';
-import { ChecklistItemEditor } from '@/components/ChecklistItemEditor';
-import { MarkdownRenderer } from '@/components/MarkdownRenderer';
-
-interface ChecklistItem {
-  id: string;
-  text: string;
-  completed: boolean;
-}
-
-interface Checklist {
-  id: string;
-  name: string;
-  type: 'web' | 'mobile' | 'desktop' | 'api';
-  items: ChecklistItem[];
-}
+import { ChecklistItemEditor } from './ChecklistItemEditor';
+import { MarkdownRenderer } from './MarkdownRenderer';
+import { useChecklistData } from '@/hooks/useChecklistData';
 
 interface ChecklistDetailViewProps {
   checklistId: string;
   onBack: () => void;
 }
 
-// Mock data - same as used in ChecklistsView
-const getMockChecklists = (): Checklist[] => [
-  {
-    id: '1',
-    name: 'Web Application Security',
-    type: 'web',
-    items: [
-      { id: '1', text: '**SQL Injection Testing**\n\nTest for SQL injection vulnerabilities in all input fields and parameters.', completed: true },
-      { id: '2', text: '**Cross-Site Scripting (XSS)**\n\n- Test for Reflected XSS\n- Test for Stored XSS\n- Test for DOM-based XSS', completed: true },
-      { id: '3', text: 'Test for CSRF vulnerabilities', completed: false },
-      { id: '4', text: 'Check for insecure direct object references', completed: false },
-      { id: '5', text: 'Test authentication bypass', completed: false },
-      { id: '6', text: 'Check for session management issues', completed: false },
-      { id: '7', text: 'Test for directory traversal', completed: false },
-      { id: '8', text: 'Check for command injection', completed: false }
-    ]
-  },
-  {
-    id: '2',
-    name: 'Mobile Application Security',
-    type: 'mobile',
-    items: [
-      { id: '1', text: 'Test for insecure data storage', completed: false },
-      { id: '2', text: 'Check for weak cryptography', completed: false },
-      { id: '3', text: 'Test for insecure communication', completed: false },
-      { id: '4', text: 'Check for improper platform usage', completed: false },
-      { id: '5', text: 'Test for reverse engineering protection', completed: false }
-    ]
-  }
-];
-
 export function ChecklistDetailView({ checklistId, onBack }: ChecklistDetailViewProps) {
   const { theme } = useTheme();
   const isHackerTheme = theme === 'hacker';
-  const { toast } = useToast();
   
-  const [checklist, setChecklist] = useState<Checklist | null>(null);
-  const [editingItem, setEditingItem] = useState<{ id: string; text: string } | null>(null);
-  const [showNewItemEditor, setShowNewItemEditor] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [editingItem, setEditingItem] = useState<string | null>(null);
+  const [showAddItem, setShowAddItem] = useState(false);
+
+  const {
+    checklists,
+    toggleChecklistItem,
+    addChecklistItem,
+    updateChecklistItem,
+    deleteChecklistItem
+  } = useChecklistData();
+
+  const checklist = checklists.find(c => c.id === checklistId);
 
   useEffect(() => {
-    const loadChecklist = () => {
+    if (checklist) {
       console.log('Loading checklist with ID:', checklistId);
-      const mockChecklists = getMockChecklists();
-      const found = mockChecklists.find(c => c.id === checklistId);
-      
-      if (found) {
-        console.log('Found checklist:', found);
-        setChecklist(found);
-      } else {
-        console.log('Checklist not found. Available IDs:', mockChecklists.map(c => c.id));
-        setChecklist(null);
-      }
-      setLoading(false);
-    };
+      console.log('Found checklist:', checklist);
+    }
+  }, [checklist, checklistId]);
 
-    loadChecklist();
-  }, [checklistId]);
+  if (!checklist) {
+    return (
+      <div className="space-y-4">
+        <Button 
+          onClick={onBack} 
+          variant="outline"
+          className={isHackerTheme ? "border-green-600 text-green-400 hover:bg-green-950/50 font-mono" : "border-gray-600 text-gray-300 hover:bg-gray-700"}
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Checklists
+        </Button>
+        <div className={`text-center py-8 ${isHackerTheme ? "text-green-400 font-mono" : "text-white"}`}>
+          <h2 className="text-xl font-semibold mb-2">Checklist not found</h2>
+          <p className="text-gray-400">The checklist you're looking for doesn't exist or has been deleted.</p>
+        </div>
+      </div>
+    );
+  }
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -98,141 +69,48 @@ export function ChecklistDetailView({ checklistId, onBack }: ChecklistDetailView
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'web': return 'bg-blue-600';
-      case 'mobile': return 'bg-green-600';
-      case 'desktop': return 'bg-purple-600';
-      default: return 'bg-gray-600';
+      case 'web': return isHackerTheme ? 'bg-blue-900 text-blue-300' : 'bg-blue-600';
+      case 'mobile': return isHackerTheme ? 'bg-green-900 text-green-300' : 'bg-green-600';
+      case 'desktop': return isHackerTheme ? 'bg-purple-900 text-purple-300' : 'bg-purple-600';
+      case 'api': return isHackerTheme ? 'bg-orange-900 text-orange-300' : 'bg-orange-600';
+      default: return isHackerTheme ? 'bg-gray-900 text-gray-300' : 'bg-gray-600';
     }
   };
 
-  const toggleItem = (itemId: string) => {
-    if (!checklist) return;
-    
-    setChecklist({
-      ...checklist,
-      items: checklist.items.map(item =>
-        item.id === itemId ? { ...item, completed: !item.completed } : item
-      )
-    });
-  };
-
-  const startEditingItem = (itemId: string, currentText: string) => {
-    setEditingItem({ id: itemId, text: currentText });
-  };
-
-  const saveEditedItem = (newText: string) => {
-    if (!checklist || !editingItem) return;
-
-    setChecklist({
-      ...checklist,
-      items: checklist.items.map(item =>
-        item.id === editingItem.id ? { ...item, text: newText } : item
-      )
-    });
-
-    setEditingItem(null);
-    
-    toast({
-      title: "Success",
-      description: "Checklist item updated successfully"
-    });
-  };
-
-  const deleteItem = (itemId: string) => {
-    if (!checklist) return;
-
-    setChecklist({
-      ...checklist,
-      items: checklist.items.filter(item => item.id !== itemId)
-    });
-
-    toast({
-      title: "Success",
-      description: "Checklist item deleted successfully"
-    });
-  };
-
-  const addNewItem = (text: string) => {
-    if (!checklist || !text.trim()) return;
-
-    const newItem: ChecklistItem = {
-      id: Date.now().toString(),
-      text: text.trim(),
-      completed: false
-    };
-
-    setChecklist({
-      ...checklist,
-      items: [...checklist.items, newItem]
-    });
-
-    setShowNewItemEditor(false);
-    
-    toast({
-      title: "Success",
-      description: "New checklist item added successfully"
-    });
-  };
-
-  const getProgress = () => {
-    if (!checklist) return 0;
-    const completed = checklist.items.filter(item => item.completed).length;
-    return Math.round((completed / checklist.items.length) * 100);
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <p className={isHackerTheme ? "text-green-400 font-mono" : "text-gray-400"}>
-          Loading checklist...
-        </p>
-      </div>
-    );
-  }
-
-  if (!checklist) {
-    return (
-      <div className="space-y-6">
-        <Button 
-          variant="outline" 
-          onClick={onBack}
-          className={isHackerTheme ? "border-green-600 text-green-400 hover:bg-green-950/50 font-mono" : ""}
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Checklists
-        </Button>
-        
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <p className={isHackerTheme ? "text-green-400 font-mono text-lg mb-2" : "text-gray-400 text-lg mb-2"}>
-              Checklist not found
-            </p>
-            <p className={isHackerTheme ? "text-green-300 font-mono text-sm" : "text-gray-500 text-sm"}>
-              The requested checklist could not be loaded. Please go back and try again.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const progress = checklist.items.length > 0 
+    ? Math.round((checklist.items.filter(item => item.completed).length / checklist.items.length) * 100)
+    : 0;
 
   const IconComponent = getTypeIcon(checklist.type);
-  const progress = getProgress();
+
+  const handleSaveItem = (text: string) => {
+    if (editingItem) {
+      updateChecklistItem(checklistId, editingItem, text);
+      setEditingItem(null);
+    } else {
+      addChecklistItem(checklistId, text);
+      setShowAddItem(false);
+    }
+  };
+
+  const handleDeleteItem = (itemId: string) => {
+    deleteChecklistItem(checklistId, itemId);
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <Button 
-          variant="outline" 
-          onClick={onBack}
-          className={isHackerTheme ? "border-green-600 text-green-400 hover:bg-green-950/50 font-mono" : ""}
+          onClick={onBack} 
+          variant="outline"
+          className={isHackerTheme ? "border-green-600 text-green-400 hover:bg-green-950/50 font-mono" : "border-gray-600 text-gray-300 hover:bg-gray-700"}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Checklists
         </Button>
         
-        <Button
-          onClick={() => setShowNewItemEditor(true)}
+        <Button 
+          onClick={() => setShowAddItem(true)}
           className={isHackerTheme ? "bg-green-600 hover:bg-green-700 text-black font-mono" : "bg-blue-600 hover:bg-blue-700"}
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -243,92 +121,123 @@ export function ChecklistDetailView({ checklistId, onBack }: ChecklistDetailView
       <Card className={isHackerTheme ? "bg-black border-green-600" : "bg-gray-800 border-gray-700"}>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className={`flex items-center space-x-2 ${isHackerTheme ? "text-green-400 font-mono" : "text-white"}`}>
+            <CardTitle className={`flex items-center space-x-3 ${isHackerTheme ? "text-green-400 font-mono" : "text-white"}`}>
               <IconComponent className={`h-6 w-6 ${isHackerTheme ? "text-green-400" : "text-blue-400"}`} />
               <span>{checklist.name}</span>
+              <Badge className={`${getTypeColor(checklist.type)} text-white`}>
+                {checklist.type}
+              </Badge>
             </CardTitle>
-            <Badge className={`${getTypeColor(checklist.type)} text-white`}>
-              {checklist.type}
-            </Badge>
           </div>
+          
+          {checklist.description && (
+            <p className={`${isHackerTheme ? "text-green-300 font-mono" : "text-gray-300"}`}>
+              {checklist.description}
+            </p>
+          )}
+          
           <div className="flex items-center space-x-2">
             <div className={`flex-1 ${isHackerTheme ? "bg-green-950" : "bg-gray-700"} rounded-full h-3`}>
               <div 
-                className={`${isHackerTheme ? "bg-green-500" : "bg-blue-600"} h-3 rounded-full transition-all duration-300`}
+                className={`${isHackerTheme ? "bg-green-600" : "bg-blue-600"} h-3 rounded-full transition-all duration-300`}
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <span className={`text-sm ${isHackerTheme ? "text-green-400 font-mono" : "text-gray-400"}`}>
-              {progress}% ({checklist.items.filter(i => i.completed).length}/{checklist.items.length})
+            <span className={`text-sm font-medium ${isHackerTheme ? "text-green-400 font-mono" : "text-gray-400"}`}>
+              {progress}% Complete ({checklist.items.filter(item => item.completed).length}/{checklist.items.length})
             </span>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {checklist.items.map((item) => (
-              <div key={item.id} className={`flex items-start space-x-3 p-3 rounded ${isHackerTheme ? "bg-green-950/20 border border-green-800" : "bg-gray-700/50"}`}>
-                <Checkbox
-                  id={`${checklist.id}-${item.id}`}
-                  checked={item.completed}
-                  onCheckedChange={() => toggleItem(item.id)}
-                  className={`mt-1 ${isHackerTheme ? "data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600" : "data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"}`}
-                />
-                
-                <div className="flex-1 min-w-0">
-                  <div className={`${item.completed 
-                    ? isHackerTheme ? 'opacity-60' : 'opacity-60'
-                    : ''
-                  }`}>
-                    <MarkdownRenderer 
-                      content={item.text} 
-                      className={item.completed ? 'line-through' : ''}
-                    />
-                  </div>
-                </div>
-                
-                <div className="flex space-x-1 flex-shrink-0">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => startEditingItem(item.id, item.text)}
-                    className={`${isHackerTheme ? "text-green-400 hover:text-green-300 hover:bg-green-950/50" : "text-gray-400 hover:text-white hover:bg-gray-700"}`}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => deleteItem(item.id)}
-                    className="text-red-400 hover:text-red-300 hover:bg-gray-700"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
       </Card>
 
-      {/* Edit Item Modal */}
-      {editingItem && (
-        <ChecklistItemEditor
-          isOpen={true}
-          onClose={() => setEditingItem(null)}
-          onSave={saveEditedItem}
-          initialText={editingItem.text}
-          title="Edit Checklist Item"
-        />
-      )}
+      <div className="space-y-4">
+        {showAddItem && (
+          <Card className={isHackerTheme ? "bg-green-950/20 border-green-600" : "bg-blue-950/20 border-blue-600"}>
+            <CardContent className="pt-6">
+              <ChecklistItemEditor
+                initialText=""
+                onSave={handleSaveItem}
+                onCancel={() => setShowAddItem(false)}
+                isHackerTheme={isHackerTheme}
+              />
+            </CardContent>
+          </Card>
+        )}
 
-      {/* Add New Item Modal */}
-      <ChecklistItemEditor
-        isOpen={showNewItemEditor}
-        onClose={() => setShowNewItemEditor(false)}
-        onSave={addNewItem}
-        initialText=""
-        title="Add New Checklist Item"
-      />
+        {checklist.items.map((item, index) => (
+          <Card 
+            key={item.id} 
+            className={`transition-all ${isHackerTheme ? "bg-black border-green-600/50 hover:border-green-600" : "bg-gray-800 border-gray-700 hover:border-gray-500"}`}
+          >
+            <CardContent className="pt-6">
+              {editingItem === item.id ? (
+                <ChecklistItemEditor
+                  initialText={item.text}
+                  onSave={handleSaveItem}
+                  onCancel={() => setEditingItem(null)}
+                  isHackerTheme={isHackerTheme}
+                />
+              ) : (
+                <div className="flex items-start space-x-3">
+                  <Checkbox
+                    id={`item-${item.id}`}
+                    checked={item.completed}
+                    onCheckedChange={() => toggleChecklistItem(checklistId, item.id)}
+                    className={`mt-1 ${isHackerTheme ? "data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600" : "data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"}`}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className={`${item.completed ? 'opacity-60' : ''}`}>
+                      <MarkdownRenderer 
+                        content={item.text} 
+                        className={isHackerTheme ? "text-green-300 font-mono" : "text-gray-300"}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setEditingItem(item.id)}
+                      className={`${isHackerTheme ? "text-green-400 hover:text-green-300 hover:bg-green-950/50" : "text-gray-400 hover:text-white hover:bg-gray-700"}`}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleDeleteItem(item.id)}
+                      className="text-red-400 hover:text-red-300 hover:bg-gray-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+
+        {checklist.items.length === 0 && !showAddItem && (
+          <Card className={isHackerTheme ? "bg-black border-green-600/50" : "bg-gray-800 border-gray-700"}>
+            <CardContent className="text-center py-12">
+              <CheckSquare className={`h-12 w-12 mx-auto mb-4 ${isHackerTheme ? "text-green-600" : "text-gray-400"}`} />
+              <h3 className={`text-lg font-semibold mb-2 ${isHackerTheme ? "text-green-400 font-mono" : "text-white"}`}>
+                No items yet
+              </h3>
+              <p className={`mb-4 ${isHackerTheme ? "text-green-300 font-mono" : "text-gray-400"}`}>
+                Start building your security checklist by adding items.
+              </p>
+              <Button 
+                onClick={() => setShowAddItem(true)}
+                className={isHackerTheme ? "bg-green-600 hover:bg-green-700 text-black font-mono" : "bg-blue-600 hover:bg-blue-700"}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add First Item
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }
